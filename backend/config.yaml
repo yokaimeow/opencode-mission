@@ -1,0 +1,21 @@
+server:
+  port: 8080
+  host: "0.0.0.0"
+  readtimeout: 10s
+  writetimeout: 10s
+
+database:
+  url: "postgres://postgres:password@localhost:5432/opencode_mission?sslmode=disable"
+  maxopenconns: 25
+  maxidleconns: 5
+  connmaxlifetime: 5m
+
+valkey:
+  url: "valkey://localhost:6379"
+
+jwt:
+  secret: "dev-secret-key-change-in-production"
+  expiretime: 168h
+
+log:
+  level: "debug"
