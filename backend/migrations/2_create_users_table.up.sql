@@ -14,7 +14,6 @@ CREATE TABLE users (
     username VARCHAR(100) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     avatar_url TEXT,
-    role VARCHAR(50) DEFAULT 'developer' CHECK (role IN ('admin', 'developer', 'viewer')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -22,7 +21,6 @@ CREATE TABLE users (
 -- Create indexes
 CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_users_username ON users(username);
-CREATE INDEX idx_users_role ON users(role);
 
 -- Create update timestamp trigger
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
@@ -30,4 +28,3 @@ CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
 
 -- Add comments
 COMMENT ON TABLE users IS 'Users table';
-COMMENT ON COLUMN users.role IS 'User role: admin-administrator, developer-developer, viewer-guest';

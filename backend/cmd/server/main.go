@@ -60,6 +60,10 @@ func main() {
 	defer pool.Close()
 	log.Println("✅ Database connected (using pgx/v5)")
 
+	if err := database.RunMigrations(cfg.Database.URL); err != nil {
+		log.Fatalf("Failed to run database migrations: %v", err)
+	}
+
 	valkeyClient, err := valkey.NewClient(cfg.Valkey.URL)
 	if err != nil {
 		log.Fatalf("Failed to connect to Valkey: %v", err)

@@ -96,10 +96,6 @@ export default function HomePage() {
                       </div>
                     )}
                     <div>
-                      <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Role</Label>
-                      <p className="mt-1 text-sm text-gray-900 dark:text-gray-100 capitalize">{user.role}</p>
-                    </div>
-                    <div>
                       <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Member Since</Label>
                       <p className="mt-1 text-sm text-gray-900 dark:text-gray-100">
                         {new Date(user.created_at).toLocaleDateString()}

@@ -29,17 +29,11 @@ func (r *UserRepository) Create(ctx context.Context, user *models.User) error {
 		avatarUrl = pgtype.Text{String: user.AvatarURL, Valid: true}
 	}
 
-	var role pgtype.Text
-	if user.Role != "" {
-		role = pgtype.Text{String: user.Role, Valid: true}
-	}
-
 	params := CreateUserParams{
 		Email:        user.Email,
 		Username:     user.Username,
 		PasswordHash: user.PasswordHash,
 		AvatarUrl:    avatarUrl,
-		Role:         role,
 	}
 
 	createdUser, err := r.queries.CreateUser(ctx, params)
@@ -49,7 +43,6 @@ func (r *UserRepository) Create(ctx context.Context, user *models.User) error {
 
 	user.ID = createdUser.ID.String()
 	user.AvatarURL = createdUser.AvatarUrl.String
-	user.Role = createdUser.Role.String
 	user.CreatedAt = createdUser.CreatedAt
 	user.UpdatedAt = createdUser.UpdatedAt
 
@@ -71,7 +64,6 @@ func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*models.
 		Username:     user.Username,
 		PasswordHash: user.PasswordHash,
 		AvatarURL:    user.AvatarUrl.String,
-		Role:         user.Role.String,
 		CreatedAt:    user.CreatedAt,
 		UpdatedAt:    user.UpdatedAt,
 	}, nil
@@ -92,19 +84,18 @@ func (r *UserRepository) GetByUsername(ctx context.Context, username string) (*m
 		Username:     user.Username,
 		PasswordHash: user.PasswordHash,
 		AvatarURL:    user.AvatarUrl.String,
-		Role:         user.Role.String,
 		CreatedAt:    user.CreatedAt,
 		UpdatedAt:    user.UpdatedAt,
 	}, nil
 }
 
 func (r *UserRepository) GetByID(ctx context.Context, id string) (*models.User, error) {
-	uuid, err := uuid.Parse(id)
+	uid, err := uuid.Parse(id)
 	if err != nil {
 		return nil, err
 	}
 
-	user, err := r.queries.GetUserByID(ctx, uuid)
+	user, err := r.queries.GetUserByID(ctx, uid)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil
@@ -118,7 +109,6 @@ func (r *UserRepository) GetByID(ctx context.Context, id string) (*models.User, 
 		Username:     user.Username,
 		PasswordHash: user.PasswordHash,
 		AvatarURL:    user.AvatarUrl.String,
-		Role:         user.Role.String,
 		CreatedAt:    user.CreatedAt,
 		UpdatedAt:    user.UpdatedAt,
 	}, nil

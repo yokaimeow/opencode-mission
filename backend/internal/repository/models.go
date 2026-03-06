@@ -18,8 +18,6 @@ type User struct {
 	Username     string      `json:"username"`
 	PasswordHash string      `json:"password_hash"`
 	AvatarUrl    pgtype.Text `json:"avatar_url"`
-	// User role: admin-administrator, developer-developer, viewer-guest
-	Role      pgtype.Text `json:"role"`
-	CreatedAt time.Time   `json:"created_at"`
-	UpdatedAt time.Time   `json:"updated_at"`
+	CreatedAt    time.Time   `json:"created_at"`
+	UpdatedAt    time.Time   `json:"updated_at"`
 }

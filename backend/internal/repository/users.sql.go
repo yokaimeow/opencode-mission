@@ -13,9 +13,9 @@ import (
 )
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO users (email, username, password_hash, avatar_url, role)
-VALUES ($1, $2, $3, $4, $5)
-RETURNING id, email, username, password_hash, avatar_url, role, created_at, updated_at
+INSERT INTO users (email, username, password_hash, avatar_url)
+VALUES ($1, $2, $3, $4)
+RETURNING id, email, username, password_hash, avatar_url, created_at, updated_at
 `
 
 type CreateUserParams struct {
@@ -23,7 +23,6 @@ type CreateUserParams struct {
 	Username     string      `json:"username"`
 	PasswordHash string      `json:"password_hash"`
 	AvatarUrl    pgtype.Text `json:"avatar_url"`
-	Role         pgtype.Text `json:"role"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
@@ -32,7 +31,6 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		arg.Username,
 		arg.PasswordHash,
 		arg.AvatarUrl,
-		arg.Role,
 	)
 	var i User
 	err := row.Scan(
@@ -41,7 +39,6 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.Username,
 		&i.PasswordHash,
 		&i.AvatarUrl,
-		&i.Role,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -59,7 +56,7 @@ func (q *Queries) DeleteUser(ctx context.Context, id uuid.UUID) error {
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, email, username, password_hash, avatar_url, role, created_at, updated_at FROM users
+SELECT id, email, username, password_hash, avatar_url, created_at, updated_at FROM users
 WHERE email = $1
 LIMIT 1
 `
@@ -73,7 +70,6 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.Username,
 		&i.PasswordHash,
 		&i.AvatarUrl,
-		&i.Role,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -81,7 +77,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, email, username, password_hash, avatar_url, role, created_at, updated_at FROM users
+SELECT id, email, username, password_hash, avatar_url, created_at, updated_at FROM users
 WHERE id = $1
 LIMIT 1
 `
@@ -95,7 +91,6 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
 		&i.Username,
 		&i.PasswordHash,
 		&i.AvatarUrl,
-		&i.Role,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -103,7 +98,7 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
 }
 
 const getUserByUsername = `-- name: GetUserByUsername :one
-SELECT id, email, username, password_hash, avatar_url, role, created_at, updated_at FROM users
+SELECT id, email, username, password_hash, avatar_url, created_at, updated_at FROM users
 WHERE username = $1
 LIMIT 1
 `
@@ -117,7 +112,6 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User,
 		&i.Username,
 		&i.PasswordHash,
 		&i.AvatarUrl,
-		&i.Role,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -130,10 +124,9 @@ SET
     email = COALESCE($1, email),
     username = COALESCE($2, username),
     password_hash = COALESCE($3, password_hash),
-    avatar_url = COALESCE($4, avatar_url),
-    role = COALESCE($5, role)
-WHERE id = $6
-RETURNING id, email, username, password_hash, avatar_url, role, created_at, updated_at
+    avatar_url = COALESCE($4, avatar_url)
+WHERE id = $5
+RETURNING id, email, username, password_hash, avatar_url, created_at, updated_at
 `
 
 type UpdateUserParams struct {
@@ -141,7 +134,6 @@ type UpdateUserParams struct {
 	Username     pgtype.Text `json:"username"`
 	PasswordHash pgtype.Text `json:"password_hash"`
 	AvatarUrl    pgtype.Text `json:"avatar_url"`
-	Role         pgtype.Text `json:"role"`
 	ID           uuid.UUID   `json:"id"`
 }
 
@@ -151,7 +143,6 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		arg.Username,
 		arg.PasswordHash,
 		arg.AvatarUrl,
-		arg.Role,
 		arg.ID,
 	)
 	var i User
@@ -161,7 +152,6 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		&i.Username,
 		&i.PasswordHash,
 		&i.AvatarUrl,
-		&i.Role,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

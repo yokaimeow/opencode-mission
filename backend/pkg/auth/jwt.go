@@ -12,7 +12,6 @@ type Claims struct {
 	UserID    string `json:"user_id"`
 	Email     string `json:"email"`
 	Username  string `json:"username"`
-	Role      string `json:"role"`
 	TokenID   string `json:"jti"`
 	TokenType string `json:"token_type"`
 	jwt.RegisteredClaims
@@ -34,14 +33,13 @@ func NewJWTManager(accessTokenSecret, refreshTokenSecret string, accessTokenExpi
 	}
 }
 
-func (m *JWTManager) GenerateToken(userID, email, username, role string) (string, string, error) {
+func (m *JWTManager) GenerateToken(userID, email, username string) (string, string, error) {
 	tokenID := uuid.New().String()
 
 	claims := &Claims{
 		UserID:    userID,
 		Email:     email,
 		Username:  username,
-		Role:      role,
 		TokenID:   tokenID,
 		TokenType: "access",
 		RegisteredClaims: jwt.RegisteredClaims{

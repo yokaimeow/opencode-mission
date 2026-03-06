@@ -11,7 +11,6 @@ import (
 	"github.com/yokaimeow/opencode-mission/pkg/auth"
 )
 
-// Sentinel errors for auth operations
 var (
 	ErrEmailAlreadyRegistered = errors.New("email already registered")
 	ErrUsernameAlreadyTaken   = errors.New("username already taken")
@@ -59,14 +58,13 @@ func (s *AuthService) Register(ctx context.Context, req *models.CreateUserReques
 		Email:        req.Email,
 		Username:     req.Username,
 		PasswordHash: passwordHash,
-		Role:         "developer",
 	}
 
 	if err := s.userRepo.Create(ctx, user); err != nil {
 		return nil, fmt.Errorf("failed to create user: %w", err)
 	}
 
-	accessToken, refreshToken, err := s.jwtManager.GenerateToken(user.ID, user.Email, user.Username, user.Role)
+	accessToken, refreshToken, err := s.jwtManager.GenerateToken(user.ID, user.Email, user.Username)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate token: %w", err)
 	}
@@ -101,7 +99,7 @@ func (s *AuthService) Login(ctx context.Context, req *models.LoginRequest) (*mod
 		return nil, ErrInvalidCredentials
 	}
 
-	accessToken, refreshToken, err := s.jwtManager.GenerateToken(user.ID, user.Email, user.Username, user.Role)
+	accessToken, refreshToken, err := s.jwtManager.GenerateToken(user.ID, user.Email, user.Username)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate token: %w", err)
 	}
@@ -160,7 +158,7 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*m
 		return nil, ErrUserNotFound
 	}
 
-	accessToken, newRefreshToken, err := s.jwtManager.GenerateToken(user.ID, user.Email, user.Username, user.Role)
+	accessToken, newRefreshToken, err := s.jwtManager.GenerateToken(user.ID, user.Email, user.Username)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate token: %w", err)
 	}
@@ -192,11 +190,9 @@ func (s *AuthService) Logout(ctx context.Context, accessToken, refreshToken stri
 		return fmt.Errorf("failed to blacklist token: %w", err)
 	}
 
-	// Revoke refresh token if provided
 	if refreshToken != "" {
 		refreshClaims, err := s.jwtManager.ValidateRefreshToken(refreshToken)
 		if err == nil {
-			// Best effort: try to revoke, but don't fail if it doesn't work
 			_ = s.tokenBlacklist.RevokeRefreshToken(ctx, refreshClaims.TokenID)
 		}
 	}

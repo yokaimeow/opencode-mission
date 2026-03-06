@@ -1,6 +1,6 @@
 -- name: CreateUser :one
-INSERT INTO users (email, username, password_hash, avatar_url, role)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO users (email, username, password_hash, avatar_url)
+VALUES ($1, $2, $3, $4)
 RETURNING *;
 
 -- name: GetUserByEmail :one
@@ -24,8 +24,7 @@ SET
     email = COALESCE(sqlc.narg(email), email),
     username = COALESCE(sqlc.narg(username), username),
     password_hash = COALESCE(sqlc.narg(password_hash), password_hash),
-    avatar_url = COALESCE(sqlc.narg(avatar_url), avatar_url),
-    role = COALESCE(sqlc.narg(role), role)
+    avatar_url = COALESCE(sqlc.narg(avatar_url), avatar_url)
 WHERE id = sqlc.arg(id)
 RETURNING *;
 

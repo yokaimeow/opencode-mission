@@ -4,7 +4,6 @@ export interface User {
   username: string;
   full_name?: string;
   avatar_url?: string;
-  role: 'admin' | 'developer' | 'viewer';
   created_at: string;
   updated_at: string;
 }
