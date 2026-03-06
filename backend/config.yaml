@@ -5,13 +5,13 @@ server:
   writetimeout: 10s
 
 database:
-  url: "postgres://postgres:password@localhost:5432/opencode_mission?sslmode=disable"
+  url: "postgres://postgres:password@localhost:5432/opencode-mission?sslmode=disable"
   maxopenconns: 25
   maxidleconns: 5
   connmaxlifetime: 5m
 
 valkey:
-  url: "valkey://localhost:6379"
+  url: "valkey://localhost:6379/0"
 
 jwt:
   secret: "dev-secret-key-change-in-production"

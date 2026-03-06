@@ -34,8 +34,10 @@ type ValkeyConfig struct {
 }
 
 type JWTConfig struct {
-	Secret     string
-	ExpireTime time.Duration
+	AccessTokenSecret  string        `mapstructure:"access_token_secret"`
+	RefreshTokenSecret string        `mapstructure:"refresh_token_secret"`
+	AccessTokenExpire  time.Duration `mapstructure:"access_token_expire"`
+	RefreshTokenExpire time.Duration `mapstructure:"refresh_token_expire"`
 }
 
 type LogConfig struct {
@@ -60,7 +62,11 @@ func Load() (*Config, error) {
 	viper.SetDefault("database.maxopenconns", 25)
 	viper.SetDefault("database.maxidleconns", 5)
 	viper.SetDefault("database.connmaxlifetime", "5m")
-	viper.SetDefault("jwt.expiretime", "168h")
+	viper.SetDefault("valkey.url", "redis://localhost:6379/0")
+	viper.SetDefault("jwt.access_token_secret", "your-access-token-secret-key-min-32-bytes-long")
+	viper.SetDefault("jwt.refresh_token_secret", "your-refresh-token-secret-key-min-32-bytes-long")
+	viper.SetDefault("jwt.access_token_expire", "15m")
+	viper.SetDefault("jwt.refresh_token_expire", "168h")
 	viper.SetDefault("log.level", "info")
 
 	if err := viper.ReadInConfig(); err != nil {

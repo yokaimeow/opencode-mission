@@ -1,3 +1,18 @@
 .opencode
+logs
+docs
+screenshot
 
+# json
 skills-lock.json
+task.json
+
+# txt
+progress.txt
+
+# shell
+init.sh
+run-opencode-loop.sh
+
+# md
+CLAUDE.md

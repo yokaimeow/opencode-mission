@@ -1,0 +1,26 @@
+services:
+  postgres:
+    image: postgres:18.3-alpine
+    container_name: opencode-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-opencode-mission}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - opencode-mission-postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  valkey:
+    image: valkey/valkey:9.0.3-alpine
+    container_name: opencode-valkey
+    ports:
+      - "${VALKEY_PORT:-6379}:6379"
+    volumes:
+      - opencode-mission-valkey_data:/data
+    restart: unless-stopped
+
+volumes:
+  opencode-mission-postgres_data:
+  opencode-mission-valkey_data:
