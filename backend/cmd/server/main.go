@@ -72,6 +72,7 @@ func main() {
 	log.Println("✅ Valkey connected")
 
 	userRepo := repository.NewUserRepository(pool)
+	projectRepo := repository.NewProjectRepository(pool)
 	jwtManager := auth.NewJWTManager(
 		cfg.JWT.AccessTokenSecret,
 		cfg.JWT.RefreshTokenSecret,
@@ -80,8 +81,9 @@ func main() {
 	)
 	tokenBlacklist := services.NewTokenBlacklistService(valkeyClient)
 	authService := services.NewAuthService(userRepo, jwtManager, tokenBlacklist)
+	projectService := services.NewProjectService(projectRepo)
 
-	h := handlers.NewHandler(authService, jwtManager, tokenBlacklist, pool, valkeyClient)
+	h := handlers.NewHandler(authService, projectService, jwtManager, tokenBlacklist, pool, valkeyClient)
 
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()
@@ -107,6 +109,7 @@ func main() {
 			authGroup.POST("/login", h.Login)
 			authGroup.POST("/logout", h.Logout)
 			authGroup.POST("/refresh", h.RefreshToken)
+			authGroup.GET("/verify", h.VerifyToken)
 			authGroup.GET("/me", h.AuthMiddleware(), h.GetCurrentUser)
 		}
 

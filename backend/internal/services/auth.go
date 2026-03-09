@@ -79,7 +79,7 @@ func (s *AuthService) Register(ctx context.Context, req *models.CreateUserReques
 	}
 
 	return &models.AuthResponse{
-		Token:        accessToken,
+		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 		ExpiresIn:    int64(s.jwtManager.GetAccessTokenExpire().Seconds()),
 		User:         user,
@@ -114,7 +114,7 @@ func (s *AuthService) Login(ctx context.Context, req *models.LoginRequest) (*mod
 	}
 
 	return &models.AuthResponse{
-		Token:        accessToken,
+		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 		ExpiresIn:    int64(s.jwtManager.GetAccessTokenExpire().Seconds()),
 		User:         user,
@@ -173,7 +173,7 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (*m
 	}
 
 	return &models.AuthResponse{
-		Token:        accessToken,
+		AccessToken:  accessToken,
 		RefreshToken: newRefreshToken,
 		ExpiresIn:    int64(s.jwtManager.GetAccessTokenExpire().Seconds()),
 		User:         user,

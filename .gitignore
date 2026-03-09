@@ -2,6 +2,7 @@
 logs
 docs
 screenshot
+tmp
 
 # json
 skills-lock.json

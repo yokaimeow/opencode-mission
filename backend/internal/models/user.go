@@ -26,7 +26,7 @@ type LoginRequest struct {
 }
 
 type AuthResponse struct {
-	Token        string `json:"token"`
+	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
 	ExpiresIn    int64  `json:"expires_in"`
 	User         *User  `json:"user"`

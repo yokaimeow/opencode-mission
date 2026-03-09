@@ -19,6 +19,7 @@ import (
 
 type Handler struct {
 	authService    *services.AuthService
+	projectService *services.ProjectService
 	jwtManager     *auth.JWTManager
 	tokenBlacklist *services.TokenBlacklistService
 	db             *pgxpool.Pool
@@ -27,6 +28,7 @@ type Handler struct {
 
 func NewHandler(
 	authService *services.AuthService,
+	projectService *services.ProjectService,
 	jwtManager *auth.JWTManager,
 	tokenBlacklist *services.TokenBlacklistService,
 	db *pgxpool.Pool,
@@ -34,6 +36,7 @@ func NewHandler(
 ) *Handler {
 	return &Handler{
 		authService:    authService,
+		projectService: projectService,
 		jwtManager:     jwtManager,
 		tokenBlacklist: tokenBlacklist,
 		db:             db,
@@ -180,6 +183,43 @@ func (h *Handler) RefreshToken(c *gin.Context) {
 	utils.SuccessResponse(c, http.StatusOK, authResp)
 }
 
+func (h *Handler) VerifyToken(c *gin.Context) {
+	authHeader := c.GetHeader("Authorization")
+	if authHeader == "" {
+		utils.ErrorResponse(c, http.StatusUnauthorized, "UNAUTHORIZED", "Missing authorization header")
+		return
+	}
+
+	parts := strings.Split(authHeader, " ")
+	if len(parts) != 2 || parts[0] != "Bearer" {
+		utils.ErrorResponse(c, http.StatusUnauthorized, "UNAUTHORIZED", "Invalid authorization header format")
+		return
+	}
+
+	tokenString := parts[1]
+
+	claims, err := h.jwtManager.ValidateToken(tokenString)
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusUnauthorized, "UNAUTHORIZED", "Invalid or expired token")
+		return
+	}
+
+	isBlacklisted, err := h.tokenBlacklist.IsBlacklisted(c.Request.Context(), claims.TokenID)
+	if err != nil {
+		utils.ErrorResponseWithDetails(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to verify token", err.Error())
+		return
+	}
+
+	if isBlacklisted {
+		utils.ErrorResponse(c, http.StatusUnauthorized, "UNAUTHORIZED", "Token has been revoked")
+		return
+	}
+
+	utils.SuccessResponse(c, http.StatusOK, gin.H{
+		"user_id": claims.UserID,
+	})
+}
+
 func (h *Handler) GetCurrentUser(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
@@ -242,23 +282,108 @@ func (h *Handler) AuthMiddleware() gin.HandlerFunc {
 }
 
 func (h *Handler) ListProjects(c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, gin.H{"error": "not implemented"})
+	userID, exists := c.Get("user_id")
+	if !exists {
+		utils.ErrorResponse(c, http.StatusUnauthorized, "UNAUTHORIZED", "User not authenticated")
+		return
+	}
+
+	projects, err := h.projectService.ListProjectsByOwner(c.Request.Context(), userID.(string))
+	if err != nil {
+		utils.ErrorResponseWithDetails(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to list projects", err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, http.StatusOK, projects)
 }
 
 func (h *Handler) CreateProject(c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, gin.H{"error": "not implemented"})
+	userID, exists := c.Get("user_id")
+	if !exists {
+		utils.ErrorResponse(c, http.StatusUnauthorized, "UNAUTHORIZED", "User not authenticated")
+		return
+	}
+
+	var req models.CreateProjectRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.ErrorResponseWithDetails(c, http.StatusBadRequest, "INVALID_INPUT", "Invalid request data", err.Error())
+		return
+	}
+
+	project, err := h.projectService.CreateProject(c.Request.Context(), userID.(string), &req)
+	if err != nil {
+		utils.ErrorResponseWithDetails(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to create project", err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, http.StatusCreated, project)
 }
 
 func (h *Handler) GetProject(c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, gin.H{"error": "not implemented"})
+	projectID := c.Param("id")
+	if projectID == "" {
+		utils.ErrorResponse(c, http.StatusBadRequest, "INVALID_INPUT", "Project ID is required")
+		return
+	}
+
+	project, err := h.projectService.GetProject(c.Request.Context(), projectID)
+	if err != nil {
+		if errors.Is(err, services.ErrProjectNotFound) {
+			utils.ErrorResponse(c, http.StatusNotFound, "NOT_FOUND", "Project not found")
+			return
+		}
+		utils.ErrorResponseWithDetails(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to get project", err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, http.StatusOK, project)
 }
 
 func (h *Handler) UpdateProject(c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, gin.H{"error": "not implemented"})
+	projectID := c.Param("id")
+	if projectID == "" {
+		utils.ErrorResponse(c, http.StatusBadRequest, "INVALID_INPUT", "Project ID is required")
+		return
+	}
+
+	var req models.UpdateProjectRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.ErrorResponseWithDetails(c, http.StatusBadRequest, "INVALID_INPUT", "Invalid request data", err.Error())
+		return
+	}
+
+	project, err := h.projectService.UpdateProject(c.Request.Context(), projectID, &req)
+	if err != nil {
+		if errors.Is(err, services.ErrProjectNotFound) {
+			utils.ErrorResponse(c, http.StatusNotFound, "NOT_FOUND", "Project not found")
+			return
+		}
+		utils.ErrorResponseWithDetails(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to update project", err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, http.StatusOK, project)
 }
 
 func (h *Handler) DeleteProject(c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, gin.H{"error": "not implemented"})
+	projectID := c.Param("id")
+	if projectID == "" {
+		utils.ErrorResponse(c, http.StatusBadRequest, "INVALID_INPUT", "Project ID is required")
+		return
+	}
+
+	if err := h.projectService.DeleteProject(c.Request.Context(), projectID); err != nil {
+		if errors.Is(err, services.ErrProjectNotFound) {
+			utils.ErrorResponse(c, http.StatusNotFound, "NOT_FOUND", "Project not found")
+			return
+		}
+		utils.ErrorResponseWithDetails(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to delete project", err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, http.StatusOK, gin.H{
+		"message": "Project deleted successfully",
+	})
 }
 
 func (h *Handler) ListTasks(c *gin.Context) {
