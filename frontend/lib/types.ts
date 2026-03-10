@@ -32,6 +32,13 @@ export interface Project {
   name: string;
   description: string;
   owner_id: string;
+  owner?: {
+    id: string;
+    email: string;
+    username: string;
+    full_name?: string;
+    avatar_url?: string;
+  };
   created_at: string;
   updated_at: string;
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { getCookie, setCookie, deleteCookie } from '@/lib/cookies';
 import { authApi } from '../api/authApi';
 import type {
@@ -33,6 +33,7 @@ function extractTokens(data: Tokens): { access_token: string; refresh_token: str
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AuthState>(initialState);
+  const initRef = useRef(false);
 
   const fetchUser = useCallback(async (): Promise<User | null> => {
     try {
@@ -47,6 +48,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (initRef.current) return;
+    initRef.current = true;
+
     const initializeAuth = async () => {
       try {
         const accessToken = getCookie(ACCESS_TOKEN_KEY);

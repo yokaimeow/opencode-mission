@@ -66,14 +66,27 @@ func (r *ProjectRepository) GetByID(ctx context.Context, id string) (*models.Pro
 		return nil, err
 	}
 
-	return &models.Project{
+	result := &models.Project{
 		ID:          project.ID.String(),
 		Name:        project.Name,
 		Description: project.Description.String,
 		OwnerID:     project.OwnerID.String(),
 		CreatedAt:   project.CreatedAt,
 		UpdatedAt:   project.UpdatedAt,
-	}, nil
+	}
+
+	if project.UserID.Valid {
+		result.Owner = &models.User{
+			ID:       uuid.UUID(project.UserID.Bytes).String(),
+			Email:    project.UserEmail.String,
+			Username: project.UserUsername.String,
+		}
+		if project.UserAvatarUrl.Valid {
+			result.Owner.AvatarURL = project.UserAvatarUrl.String
+		}
+	}
+
+	return result, nil
 }
 
 func (r *ProjectRepository) ListByOwner(ctx context.Context, ownerID string) ([]*models.Project, error) {
@@ -89,14 +102,27 @@ func (r *ProjectRepository) ListByOwner(ctx context.Context, ownerID string) ([]
 
 	result := make([]*models.Project, 0, len(projects))
 	for _, p := range projects {
-		result = append(result, &models.Project{
+		project := &models.Project{
 			ID:          p.ID.String(),
 			Name:        p.Name,
 			Description: p.Description.String,
 			OwnerID:     p.OwnerID.String(),
 			CreatedAt:   p.CreatedAt,
 			UpdatedAt:   p.UpdatedAt,
-		})
+		}
+
+		if p.UserID.Valid {
+			project.Owner = &models.User{
+				ID:       uuid.UUID(p.UserID.Bytes).String(),
+				Email:    p.UserEmail.String,
+				Username: p.UserUsername.String,
+			}
+			if p.UserAvatarUrl.Valid {
+				project.Owner.AvatarURL = p.UserAvatarUrl.String
+			}
+		}
+
+		result = append(result, project)
 	}
 
 	return result, nil

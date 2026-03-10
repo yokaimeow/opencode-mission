@@ -7,6 +7,7 @@ package repository
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -49,14 +50,39 @@ func (q *Queries) DeleteProject(ctx context.Context, id uuid.UUID) error {
 }
 
 const getProjectByID = `-- name: GetProjectByID :one
-SELECT id, name, description, owner_id, created_at, updated_at FROM projects
-WHERE id = $1
+SELECT 
+    p.id, 
+    p.name, 
+    p.description, 
+    p.owner_id, 
+    p.created_at, 
+    p.updated_at,
+    u.id as user_id,
+    u.email as user_email,
+    u.username as user_username,
+    u.avatar_url as user_avatar_url
+FROM projects p
+LEFT JOIN users u ON p.owner_id = u.id
+WHERE p.id = $1
 LIMIT 1
 `
 
-func (q *Queries) GetProjectByID(ctx context.Context, id uuid.UUID) (Project, error) {
+type GetProjectByIDRow struct {
+	ID            uuid.UUID   `json:"id"`
+	Name          string      `json:"name"`
+	Description   pgtype.Text `json:"description"`
+	OwnerID       uuid.UUID   `json:"owner_id"`
+	CreatedAt     time.Time   `json:"created_at"`
+	UpdatedAt     time.Time   `json:"updated_at"`
+	UserID        pgtype.UUID `json:"user_id"`
+	UserEmail     pgtype.Text `json:"user_email"`
+	UserUsername  pgtype.Text `json:"user_username"`
+	UserAvatarUrl pgtype.Text `json:"user_avatar_url"`
+}
+
+func (q *Queries) GetProjectByID(ctx context.Context, id uuid.UUID) (GetProjectByIDRow, error) {
 	row := q.db.QueryRow(ctx, getProjectByID, id)
-	var i Project
+	var i GetProjectByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -64,25 +90,54 @@ func (q *Queries) GetProjectByID(ctx context.Context, id uuid.UUID) (Project, er
 		&i.OwnerID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.UserID,
+		&i.UserEmail,
+		&i.UserUsername,
+		&i.UserAvatarUrl,
 	)
 	return i, err
 }
 
 const listProjectsByOwner = `-- name: ListProjectsByOwner :many
-SELECT id, name, description, owner_id, created_at, updated_at FROM projects
-WHERE owner_id = $1
-ORDER BY created_at DESC
+SELECT 
+    p.id, 
+    p.name, 
+    p.description, 
+    p.owner_id, 
+    p.created_at, 
+    p.updated_at,
+    u.id as user_id,
+    u.email as user_email,
+    u.username as user_username,
+    u.avatar_url as user_avatar_url
+FROM projects p
+LEFT JOIN users u ON p.owner_id = u.id
+WHERE p.owner_id = $1
+ORDER BY p.created_at DESC
 `
 
-func (q *Queries) ListProjectsByOwner(ctx context.Context, ownerID uuid.UUID) ([]Project, error) {
+type ListProjectsByOwnerRow struct {
+	ID            uuid.UUID   `json:"id"`
+	Name          string      `json:"name"`
+	Description   pgtype.Text `json:"description"`
+	OwnerID       uuid.UUID   `json:"owner_id"`
+	CreatedAt     time.Time   `json:"created_at"`
+	UpdatedAt     time.Time   `json:"updated_at"`
+	UserID        pgtype.UUID `json:"user_id"`
+	UserEmail     pgtype.Text `json:"user_email"`
+	UserUsername  pgtype.Text `json:"user_username"`
+	UserAvatarUrl pgtype.Text `json:"user_avatar_url"`
+}
+
+func (q *Queries) ListProjectsByOwner(ctx context.Context, ownerID uuid.UUID) ([]ListProjectsByOwnerRow, error) {
 	rows, err := q.db.Query(ctx, listProjectsByOwner, ownerID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Project{}
+	items := []ListProjectsByOwnerRow{}
 	for rows.Next() {
-		var i Project
+		var i ListProjectsByOwnerRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
@@ -90,6 +145,10 @@ func (q *Queries) ListProjectsByOwner(ctx context.Context, ownerID uuid.UUID) ([
 			&i.OwnerID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.UserID,
+			&i.UserEmail,
+			&i.UserUsername,
+			&i.UserAvatarUrl,
 		); err != nil {
 			return nil, err
 		}

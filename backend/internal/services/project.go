@@ -10,6 +10,7 @@ import (
 
 var (
 	ErrProjectNotFound = errors.New("project not found")
+	ErrNotAuthorized   = errors.New("not authorized to access this project")
 )
 
 type ProjectService struct {
@@ -33,16 +34,19 @@ func (s *ProjectService) CreateProject(ctx context.Context, ownerID string, req 
 		return nil, err
 	}
 
-	return project, nil
+	return s.projectRepo.GetByID(ctx, project.ID)
 }
 
-func (s *ProjectService) GetProject(ctx context.Context, id string) (*models.Project, error) {
-	project, err := s.projectRepo.GetByID(ctx, id)
+func (s *ProjectService) GetProject(ctx context.Context, userID, projectID string) (*models.Project, error) {
+	project, err := s.projectRepo.GetByID(ctx, projectID)
 	if err != nil {
 		return nil, err
 	}
 	if project == nil {
 		return nil, ErrProjectNotFound
+	}
+	if project.OwnerID != userID {
+		return nil, ErrNotAuthorized
 	}
 	return project, nil
 }
@@ -51,13 +55,16 @@ func (s *ProjectService) ListProjectsByOwner(ctx context.Context, ownerID string
 	return s.projectRepo.ListByOwner(ctx, ownerID)
 }
 
-func (s *ProjectService) UpdateProject(ctx context.Context, id string, req *models.UpdateProjectRequest) (*models.Project, error) {
-	project, err := s.projectRepo.GetByID(ctx, id)
+func (s *ProjectService) UpdateProject(ctx context.Context, userID, projectID string, req *models.UpdateProjectRequest) (*models.Project, error) {
+	project, err := s.projectRepo.GetByID(ctx, projectID)
 	if err != nil {
 		return nil, err
 	}
 	if project == nil {
 		return nil, ErrProjectNotFound
+	}
+	if project.OwnerID != userID {
+		return nil, ErrNotAuthorized
 	}
 
 	if req.Name != "" {
@@ -71,17 +78,20 @@ func (s *ProjectService) UpdateProject(ctx context.Context, id string, req *mode
 		return nil, err
 	}
 
-	return project, nil
+	return s.projectRepo.GetByID(ctx, project.ID)
 }
 
-func (s *ProjectService) DeleteProject(ctx context.Context, id string) error {
-	project, err := s.projectRepo.GetByID(ctx, id)
+func (s *ProjectService) DeleteProject(ctx context.Context, userID, projectID string) error {
+	project, err := s.projectRepo.GetByID(ctx, projectID)
 	if err != nil {
 		return err
 	}
 	if project == nil {
 		return ErrProjectNotFound
 	}
+	if project.OwnerID != userID {
+		return ErrNotAuthorized
+	}
 
-	return s.projectRepo.Delete(ctx, id)
+	return s.projectRepo.Delete(ctx, projectID)
 }

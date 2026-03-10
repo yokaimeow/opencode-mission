@@ -15,11 +15,11 @@ type Querier interface {
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeleteProject(ctx context.Context, id uuid.UUID) error
 	DeleteUser(ctx context.Context, id uuid.UUID) error
-	GetProjectByID(ctx context.Context, id uuid.UUID) (Project, error)
+	GetProjectByID(ctx context.Context, id uuid.UUID) (GetProjectByIDRow, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id uuid.UUID) (User, error)
 	GetUserByUsername(ctx context.Context, username string) (User, error)
-	ListProjectsByOwner(ctx context.Context, ownerID uuid.UUID) ([]Project, error)
+	ListProjectsByOwner(ctx context.Context, ownerID uuid.UUID) ([]ListProjectsByOwnerRow, error)
 	UpdateProject(ctx context.Context, arg UpdateProjectParams) (Project, error)
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
 }

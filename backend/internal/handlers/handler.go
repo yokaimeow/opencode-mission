@@ -320,16 +320,26 @@ func (h *Handler) CreateProject(c *gin.Context) {
 }
 
 func (h *Handler) GetProject(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		utils.ErrorResponse(c, http.StatusUnauthorized, "UNAUTHORIZED", "User not authenticated")
+		return
+	}
+
 	projectID := c.Param("id")
 	if projectID == "" {
 		utils.ErrorResponse(c, http.StatusBadRequest, "INVALID_INPUT", "Project ID is required")
 		return
 	}
 
-	project, err := h.projectService.GetProject(c.Request.Context(), projectID)
+	project, err := h.projectService.GetProject(c.Request.Context(), userID.(string), projectID)
 	if err != nil {
 		if errors.Is(err, services.ErrProjectNotFound) {
 			utils.ErrorResponse(c, http.StatusNotFound, "NOT_FOUND", "Project not found")
+			return
+		}
+		if errors.Is(err, services.ErrNotAuthorized) {
+			utils.ErrorResponse(c, http.StatusForbidden, "FORBIDDEN", "Not authorized to access this project")
 			return
 		}
 		utils.ErrorResponseWithDetails(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to get project", err.Error())
@@ -340,6 +350,12 @@ func (h *Handler) GetProject(c *gin.Context) {
 }
 
 func (h *Handler) UpdateProject(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		utils.ErrorResponse(c, http.StatusUnauthorized, "UNAUTHORIZED", "User not authenticated")
+		return
+	}
+
 	projectID := c.Param("id")
 	if projectID == "" {
 		utils.ErrorResponse(c, http.StatusBadRequest, "INVALID_INPUT", "Project ID is required")
@@ -352,10 +368,14 @@ func (h *Handler) UpdateProject(c *gin.Context) {
 		return
 	}
 
-	project, err := h.projectService.UpdateProject(c.Request.Context(), projectID, &req)
+	project, err := h.projectService.UpdateProject(c.Request.Context(), userID.(string), projectID, &req)
 	if err != nil {
 		if errors.Is(err, services.ErrProjectNotFound) {
 			utils.ErrorResponse(c, http.StatusNotFound, "NOT_FOUND", "Project not found")
+			return
+		}
+		if errors.Is(err, services.ErrNotAuthorized) {
+			utils.ErrorResponse(c, http.StatusForbidden, "FORBIDDEN", "Not authorized to update this project")
 			return
 		}
 		utils.ErrorResponseWithDetails(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to update project", err.Error())
@@ -366,15 +386,25 @@ func (h *Handler) UpdateProject(c *gin.Context) {
 }
 
 func (h *Handler) DeleteProject(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		utils.ErrorResponse(c, http.StatusUnauthorized, "UNAUTHORIZED", "User not authenticated")
+		return
+	}
+
 	projectID := c.Param("id")
 	if projectID == "" {
 		utils.ErrorResponse(c, http.StatusBadRequest, "INVALID_INPUT", "Project ID is required")
 		return
 	}
 
-	if err := h.projectService.DeleteProject(c.Request.Context(), projectID); err != nil {
+	if err := h.projectService.DeleteProject(c.Request.Context(), userID.(string), projectID); err != nil {
 		if errors.Is(err, services.ErrProjectNotFound) {
 			utils.ErrorResponse(c, http.StatusNotFound, "NOT_FOUND", "Project not found")
+			return
+		}
+		if errors.Is(err, services.ErrNotAuthorized) {
+			utils.ErrorResponse(c, http.StatusForbidden, "FORBIDDEN", "Not authorized to delete this project")
 			return
 		}
 		utils.ErrorResponseWithDetails(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to delete project", err.Error())

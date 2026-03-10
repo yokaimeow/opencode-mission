@@ -20,7 +20,7 @@ export const projectApi = {
   },
 
   update: async (id: string, data: UpdateProjectRequest): Promise<Project> => {
-    const response = await apiClient.put<Project>(`/projects/${id}`, data);
+    const response = await apiClient.patch<Project>(`/projects/${id}`, data);
     if (!response.data) throw new Error('Failed to update project');
     return response.data;
   },
