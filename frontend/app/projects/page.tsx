@@ -50,6 +50,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { PlusIcon, EllipsisVerticalIcon, ChevronLeftIcon, ChevronRightIcon, FolderIcon, CalendarIcon } from "lucide-react"
+import { Loading } from "@/components/loading"
 
 export default function ProjectsPage() {
   const { isLoading: authLoading, isAuthenticated } = useAuth()
@@ -158,11 +159,7 @@ export default function ProjectsPage() {
   }
 
   if (authLoading || isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-xl">Loading...</div>
-      </div>
-    )
+    return <Loading />
   }
 
   if (!isAuthenticated) {
@@ -395,6 +392,9 @@ export default function ProjectsPage() {
                                   <DropdownMenuContent align="end" className="w-32">
                                     <DropdownMenuItem onClick={() => router.push(`/projects/${project.id}`)}>
                                       View Details
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => router.push(`/projects/${project.id}/settings`)}>
+                                      Settings
                                     </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => handleEditClick(project)}>
                                       Edit

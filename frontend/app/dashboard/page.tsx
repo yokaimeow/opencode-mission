@@ -9,6 +9,7 @@ import { SectionCards } from "@/components/section-cards"
 import { TaskTable } from "@/components/task-table"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { TooltipProvider } from "@/components/ui/tooltip"
+import { Loading } from "@/components/loading"
 
 export default function HomePage() {
   const { user, isLoading, isAuthenticated } = useAuth()
@@ -21,11 +22,7 @@ export default function HomePage() {
   }, [isAuthenticated, isLoading, router])
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-xl">Loading...</div>
-      </div>
-    )
+    return <Loading />
   }
 
   if (!isAuthenticated) {
