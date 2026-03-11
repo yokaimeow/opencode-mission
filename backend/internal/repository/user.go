@@ -113,3 +113,18 @@ func (r *UserRepository) GetByID(ctx context.Context, id string) (*models.User, 
 		UpdatedAt:    user.UpdatedAt,
 	}, nil
 }
+
+func (r *UserRepository) UpdatePassword(ctx context.Context, id string, passwordHash string) error {
+	uid, err := uuid.Parse(id)
+	if err != nil {
+		return err
+	}
+
+	params := UpdateUserParams{
+		ID:           uid,
+		PasswordHash: pgtype.Text{String: passwordHash, Valid: true},
+	}
+
+	_, err = r.queries.UpdateUser(ctx, params)
+	return err
+}

@@ -199,3 +199,24 @@ func (s *AuthService) Logout(ctx context.Context, accessToken, refreshToken stri
 
 	return nil
 }
+
+func (s *AuthService) ChangePassword(ctx context.Context, userID string, req *models.ChangePasswordRequest) error {
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("failed to get user: %w", err)
+	}
+	if user == nil {
+		return ErrUserNotFound
+	}
+
+	passwordHash, err := auth.HashPassword(req.NewPassword)
+	if err != nil {
+		return fmt.Errorf("failed to hash password: %w", err)
+	}
+
+	if err := s.userRepo.UpdatePassword(ctx, userID, passwordHash); err != nil {
+		return fmt.Errorf("failed to update password: %w", err)
+	}
+
+	return nil
+}

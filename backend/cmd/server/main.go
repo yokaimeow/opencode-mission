@@ -111,6 +111,7 @@ func main() {
 			authGroup.POST("/refresh", h.RefreshToken)
 			authGroup.GET("/verify", h.VerifyToken)
 			authGroup.GET("/me", h.AuthMiddleware(), h.GetCurrentUser)
+			authGroup.PUT("/password", h.AuthMiddleware(), h.ChangePassword)
 		}
 
 		protected := v1.Group("/")

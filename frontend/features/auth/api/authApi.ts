@@ -3,6 +3,7 @@ import type {
   LoginRequest,
   RegisterRequest,
   RefreshTokenRequest,
+  ChangePasswordRequest,
   TokensResponse,
   UserResponse,
   VerifyTokenResponse,
@@ -45,5 +46,9 @@ export const authApi = {
   async getCurrentUser(): Promise<UserResponse> {
     const response = await apiClient.get<User>('/auth/me');
     return response as UserResponse;
+  },
+
+  async changePassword(data: ChangePasswordRequest): Promise<void> {
+    await apiClient.put('/auth/password', data);
   },
 };

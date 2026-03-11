@@ -236,6 +236,33 @@ func (h *Handler) GetCurrentUser(c *gin.Context) {
 	utils.SuccessResponse(c, http.StatusOK, user)
 }
 
+func (h *Handler) ChangePassword(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		utils.ErrorResponse(c, http.StatusUnauthorized, "UNAUTHORIZED", "User not authenticated")
+		return
+	}
+
+	var req models.ChangePasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.ErrorResponseWithDetails(c, http.StatusBadRequest, "INVALID_INPUT", "Invalid request data", err.Error())
+		return
+	}
+
+	if err := h.authService.ChangePassword(c.Request.Context(), userID.(string), &req); err != nil {
+		if errors.Is(err, services.ErrUserNotFound) {
+			utils.ErrorResponse(c, http.StatusNotFound, "NOT_FOUND", "User not found")
+			return
+		}
+		utils.ErrorResponseWithDetails(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to change password", err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, http.StatusOK, gin.H{
+		"message": "Password changed successfully",
+	})
+}
+
 func (h *Handler) AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")

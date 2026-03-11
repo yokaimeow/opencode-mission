@@ -2,7 +2,6 @@ export interface User {
   id: string;
   email: string;
   username: string;
-  full_name?: string;
   created_at: string;
   updated_at: string;
 }
@@ -22,11 +21,14 @@ export interface RegisterRequest {
   email: string;
   username: string;
   password: string;
-  full_name?: string;
 }
 
 export interface RefreshTokenRequest {
   refresh_token: string;
+}
+
+export interface ChangePasswordRequest {
+  new_password: string;
 }
 
 export interface UserResponse {
