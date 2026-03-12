@@ -74,6 +74,8 @@ func main() {
 	userRepo := repository.NewUserRepository(pool)
 	projectRepo := repository.NewProjectRepository(pool)
 	memberRepo := repository.NewProjectMemberRepository(pool)
+	agentRepo := repository.NewAgentRepository(pool)
+	projectAgentRepo := repository.NewProjectAgentRepository(pool)
 	jwtManager := auth.NewJWTManager(
 		cfg.JWT.AccessTokenSecret,
 		cfg.JWT.RefreshTokenSecret,
@@ -84,8 +86,9 @@ func main() {
 	authService := services.NewAuthService(userRepo, jwtManager, tokenBlacklist)
 	projectService := services.NewProjectService(projectRepo)
 	memberService := services.NewProjectMemberService(memberRepo, projectRepo)
+	agentService := services.NewAgentService(agentRepo, projectAgentRepo)
 
-	h := handlers.NewHandler(authService, projectService, memberService, jwtManager, tokenBlacklist, pool, valkeyClient)
+	h := handlers.NewHandler(authService, projectService, memberService, agentService, jwtManager, tokenBlacklist, pool, valkeyClient)
 
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()
@@ -119,6 +122,14 @@ func main() {
 		protected := v1.Group("/")
 		protected.Use(h.AuthMiddleware())
 		{
+			protected.GET("/users/search", h.SearchUsers)
+
+			protected.GET("/agents", h.ListAgents)
+			protected.POST("/agents", h.CreateAgent)
+			protected.GET("/agents/:id", h.GetAgent)
+			protected.PATCH("/agents/:id", h.UpdateAgent)
+			protected.DELETE("/agents/:id", h.DeleteAgent)
+
 			protected.GET("/projects", h.ListProjects)
 			protected.POST("/projects", h.CreateProject)
 			protected.GET("/projects/:id", h.GetProject)
@@ -129,6 +140,10 @@ func main() {
 			protected.POST("/projects/:id/members", h.AddMember)
 			protected.PATCH("/projects/:id/members/:userId", h.UpdateMemberRole)
 			protected.DELETE("/projects/:id/members/:userId", h.RemoveMember)
+
+			protected.GET("/projects/:id/agents", h.ListProjectAgents)
+			protected.POST("/projects/:id/agents", h.AddProjectAgent)
+			protected.DELETE("/projects/:id/agents/:agentId", h.RemoveProjectAgent)
 
 			protected.GET("/projects/:id/tasks", h.ListTasks)
 			protected.POST("/projects/:id/tasks", h.CreateTask)

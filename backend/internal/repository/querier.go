@@ -11,12 +11,20 @@ import (
 )
 
 type Querier interface {
+	AddProjectAgent(ctx context.Context, arg AddProjectAgentParams) error
 	AddProjectMember(ctx context.Context, arg AddProjectMemberParams) error
+	CreateAgent(ctx context.Context, arg CreateAgentParams) (Agent, error)
 	CreateProject(ctx context.Context, arg CreateProjectParams) (Project, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
+	DeleteAgent(ctx context.Context, id uuid.UUID) error
 	DeleteProject(ctx context.Context, id uuid.UUID) error
+	DeleteProjectAgent(ctx context.Context, arg DeleteProjectAgentParams) error
 	DeleteProjectMember(ctx context.Context, arg DeleteProjectMemberParams) error
 	DeleteUser(ctx context.Context, id uuid.UUID) error
+	GetAgent(ctx context.Context, id uuid.UUID) (GetAgentRow, error)
+	GetProjectAgent(ctx context.Context, arg GetProjectAgentParams) (GetProjectAgentRow, error)
+	GetProjectAgentByID(ctx context.Context, id uuid.UUID) (ProjectAgent, error)
+	GetProjectAgents(ctx context.Context, projectID uuid.UUID) ([]GetProjectAgentsRow, error)
 	GetProjectByID(ctx context.Context, id uuid.UUID) (GetProjectByIDRow, error)
 	GetProjectMember(ctx context.Context, arg GetProjectMemberParams) (GetProjectMemberRow, error)
 	GetProjectMembers(ctx context.Context, projectID uuid.UUID) ([]GetProjectMembersRow, error)
@@ -24,7 +32,10 @@ type Querier interface {
 	GetUserByID(ctx context.Context, id uuid.UUID) (User, error)
 	GetUserByUsername(ctx context.Context, username string) (User, error)
 	GetUserProjectRole(ctx context.Context, arg GetUserProjectRoleParams) (ProjectRole, error)
+	ListAgentsByCreator(ctx context.Context, createdBy uuid.UUID) ([]ListAgentsByCreatorRow, error)
 	ListProjectsByOwner(ctx context.Context, ownerID uuid.UUID) ([]ListProjectsByOwnerRow, error)
+	SearchUsers(ctx context.Context, query string) ([]SearchUsersRow, error)
+	UpdateAgent(ctx context.Context, arg UpdateAgentParams) error
 	UpdateProject(ctx context.Context, arg UpdateProjectParams) (Project, error)
 	UpdateProjectMemberRole(ctx context.Context, arg UpdateProjectMemberRoleParams) error
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)

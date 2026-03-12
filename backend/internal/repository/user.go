@@ -128,3 +128,28 @@ func (r *UserRepository) UpdatePassword(ctx context.Context, id string, password
 	_, err = r.queries.UpdateUser(ctx, params)
 	return err
 }
+
+func (r *UserRepository) Search(ctx context.Context, query string) ([]*models.User, error) {
+	if query == "" {
+		return []*models.User{}, nil
+	}
+
+	rows, err := r.queries.SearchUsers(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+
+	users := make([]*models.User, 0, len(rows))
+	for _, row := range rows {
+		users = append(users, &models.User{
+			ID:        row.ID.String(),
+			Email:     row.Email,
+			Username:  row.Username,
+			AvatarURL: row.AvatarUrl.String,
+			CreatedAt: row.CreatedAt,
+			UpdatedAt: row.UpdatedAt,
+		})
+	}
+
+	return users, nil
+}

@@ -5,16 +5,18 @@ import { useParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { projectApi } from '@/lib/projects'
 import { memberApi } from '@/lib/members'
-import { Project, ProjectMember } from '@/lib/types'
+import { agentApi } from '@/lib/agents'
+import { Project, ProjectMember, ProjectAgent } from '@/lib/types'
 import { AppSidebar } from "@/components/app-sidebar"
 import { SiteHeader } from "@/components/site-header"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
-import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
+import { TooltipProvider } from "@/components/ui/tooltip"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Checkbox } from "@/components/ui/checkbox"
+import { AddMemberDialog } from "@/components/add-member-dialog"
 import {
   SettingsIcon,
   UserIcon,
@@ -26,6 +28,7 @@ import {
   MoreHorizontalIcon,
   LayoutGridIcon,
   ListIcon,
+  BotIcon,
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -44,7 +47,6 @@ import {
 } from "@/components/ui/table"
 import { Loading } from "@/components/loading"
 
-// Mock tasks data - will be replaced with real API
 interface Task {
   id: string
   title: string
@@ -77,9 +79,11 @@ export default function ProjectDetailPage() {
   const { isLoading: authLoading, isAuthenticated } = useAuth()
   const [project, setProject] = useState<Project | null>(null)
   const [members, setMembers] = useState<ProjectMember[]>([])
+  const [projectAgents, setProjectAgents] = useState<ProjectAgent[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [tasks] = useState<Task[]>(mockTasks)
   const [viewMode, setViewMode] = useState<'board' | 'list'>('board')
+  const [showAddDialog, setShowAddDialog] = useState(false)
   const loadingRef = useRef(false)
 
   useEffect(() => {
@@ -97,12 +101,18 @@ export default function ProjectDetailPage() {
       setProject(data)
       const memberData = await memberApi.list(params.id as string)
       setMembers(memberData)
+      const agentData = await agentApi.listProjectAgents(params.id as string)
+      setProjectAgents(agentData)
     } catch (error) {
       console.error('Failed to load project:', error)
       router.push('/projects')
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const handleAddSuccess = () => {
+    loadProject()
   }
 
   const getTasksByStatus = (status: Task['status']) => {
@@ -155,6 +165,94 @@ export default function ProjectDetailPage() {
       case 'guest':
         return <Badge variant="outline" className="text-xs">Guest</Badge>
     }
+  }
+
+  const renderMembersList = (isCompact: boolean = false) => {
+    const totalMembers = members.length + projectAgents.length
+    
+    return (
+      <Card className="flex flex-col">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <UserIcon className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Members</CardTitle>
+            </div>
+            <Badge variant="outline" className="text-xs">
+              {totalMembers}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="flex-1 p-3 pt-0">
+          <div className={isCompact ? "max-h-[300px] pr-2 overflow-y-auto" : "h-[400px] pr-2 overflow-y-auto"}>
+            <div className="space-y-2">
+              {members.map((member) => (
+                <Card
+                  key={member.user_id}
+                  className="cursor-pointer hover:shadow-md transition-shadow"
+                >
+                  <CardContent className="p-3">
+                    <div className="flex items-center gap-2">
+                      <GripVerticalIcon className="h-4 w-4 text-muted-foreground mt-0.5 cursor-grab" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Avatar className="h-5 w-5 shrink-0">
+                              <AvatarImage src={member.user?.avatar_url} />
+                              <AvatarFallback className="text-[10px]">
+                                {member.user?.username?.charAt(0).toUpperCase() || '?'}
+                              </AvatarFallback>
+                            </Avatar>
+                            <p className="text-sm font-medium truncate">
+                              {member.user?.username || 'Unknown'}
+                            </p>
+                          </div>
+                          {getRoleBadge(member.role)}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+              {projectAgents.map((pa) => (
+                <Card
+                  key={pa.id}
+                  className="cursor-pointer hover:shadow-md transition-shadow"
+                >
+                  <CardContent className="p-3">
+                    <div className="flex items-center gap-2">
+                      <GripVerticalIcon className="h-4 w-4 text-muted-foreground mt-0.5 cursor-grab" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="h-5 w-5 shrink-0 rounded-full bg-muted flex items-center justify-center">
+                              <BotIcon className="h-3 w-3 text-muted-foreground" />
+                            </div>
+                            <p className="text-sm font-medium truncate">
+                              {pa.agent?.name || 'Unknown Agent'}
+                            </p>
+                          </div>
+                          {getRoleBadge(pa.role)}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="w-full mt-4"
+            onClick={() => setShowAddDialog(true)}
+          >
+            <PlusIcon className="h-4 w-4 mr-2" />
+            Add Member
+          </Button>
+        </CardContent>
+      </Card>
+    )
   }
 
   if (authLoading || isLoading) {
@@ -301,110 +399,12 @@ export default function ProjectDetailPage() {
                           </Card>
                         ))}
                       </div>
-                      <Card className="w-72 shrink-0 hidden xl:flex flex-col self-start">
-                        <CardHeader className="pb-3">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <UserIcon className="h-4 w-4 text-muted-foreground" />
-                              <CardTitle className="text-sm font-medium">Members</CardTitle>
-                            </div>
-                            <Badge variant="outline" className="text-xs">
-                              {members.length}
-                            </Badge>
-                          </div>
-                        </CardHeader>
-                        <CardContent className="flex-1 p-3 pt-0">
-                          <div className="h-[400px] pr-2 overflow-y-auto">
-                            <div className="space-y-2">
-                              {members.map((member) => (
-                                <Card
-                                  key={member.user_id}
-                                  className="cursor-pointer hover:shadow-md transition-shadow"
-                                >
-                                  <CardContent className="p-3">
-                                    <div className="flex items-center gap-2">
-                                      <GripVerticalIcon className="h-4 w-4 text-muted-foreground mt-0.5 cursor-grab" />
-                                      <div className="flex-1 min-w-0">
-                                        <div className="flex items-center justify-between gap-2">
-                                          <div className="flex items-center gap-2 min-w-0">
-                                            <Avatar className="h-5 w-5 shrink-0">
-                                              <AvatarImage src={member.user?.avatar_url} />
-                                              <AvatarFallback className="text-[10px]">
-                                                {member.user?.username?.charAt(0).toUpperCase() || '?'}
-                                              </AvatarFallback>
-                                            </Avatar>
-                                            <p className="text-sm font-medium truncate">
-                                              {member.user?.username || 'Unknown'}
-                                            </p>
-                                          </div>
-                                          {getRoleBadge(member.role)}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </CardContent>
-                                </Card>
-                              ))}
-                            </div>
-                          </div>
-                          <Button variant="outline" size="sm" className="w-full mt-4">
-                            <PlusIcon className="h-4 w-4 mr-2" />
-                            Invite Member
-                          </Button>
-                        </CardContent>
-                      </Card>
+                      <div className="w-72 shrink-0 hidden xl:block self-start">
+                        {renderMembersList()}
+                      </div>
                     </div>
                     <div className="mt-4 xl:hidden">
-                      <Card className="flex flex-col">
-                        <CardHeader className="pb-3">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <UserIcon className="h-4 w-4 text-muted-foreground" />
-                              <CardTitle className="text-sm font-medium">Members</CardTitle>
-                            </div>
-                            <Badge variant="outline" className="text-xs">
-                              {members.length}
-                            </Badge>
-                          </div>
-                        </CardHeader>
-                        <CardContent className="flex-1 p-3 pt-0">
-                          <div className="max-h-[300px] pr-2 overflow-y-auto">
-                            <div className="space-y-2">
-                              {members.map((member) => (
-                                <Card
-                                  key={member.user_id}
-                                  className="cursor-pointer hover:shadow-md transition-shadow"
-                                >
-                                  <CardContent className="p-3">
-                                    <div className="flex items-center gap-2">
-                                      <GripVerticalIcon className="h-4 w-4 text-muted-foreground mt-0.5 cursor-grab" />
-                                      <div className="flex-1 min-w-0">
-                                        <div className="flex items-center justify-between gap-2">
-                                          <div className="flex items-center gap-2 min-w-0">
-                                            <Avatar className="h-5 w-5 shrink-0">
-                                              <AvatarImage src={member.user?.avatar_url} />
-                                              <AvatarFallback className="text-[10px]">
-                                                {member.user?.username?.charAt(0).toUpperCase() || '?'}
-                                              </AvatarFallback>
-                                            </Avatar>
-                                            <p className="text-sm font-medium truncate">
-                                              {member.user?.username || 'Unknown'}
-                                            </p>
-                                          </div>
-                                          {getRoleBadge(member.role)}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </CardContent>
-                                </Card>
-                              ))}
-                            </div>
-                          </div>
-                          <Button variant="outline" size="sm" className="w-full mt-4">
-                            <PlusIcon className="h-4 w-4 mr-2" />
-                            Invite Member
-                          </Button>
-                        </CardContent>
-                      </Card>
+                      {renderMembersList(true)}
                     </div>
                     </>
                   ) : (
@@ -487,6 +487,13 @@ export default function ProjectDetailPage() {
           </div>
         </SidebarInset>
       </SidebarProvider>
+      
+      <AddMemberDialog
+        open={showAddDialog}
+        onOpenChange={setShowAddDialog}
+        projectId={project.id}
+        onSuccess={handleAddSuccess}
+      />
     </TooltipProvider>
   )
 }

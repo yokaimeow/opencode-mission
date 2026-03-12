@@ -220,3 +220,7 @@ func (s *AuthService) ChangePassword(ctx context.Context, userID string, req *mo
 
 	return nil
 }
+
+func (s *AuthService) SearchUsers(ctx context.Context, query string) ([]*models.User, error) {
+	return s.userRepo.Search(ctx, query)
+}

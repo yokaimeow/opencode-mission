@@ -13,6 +13,50 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type AgentType string
+
+const (
+	AgentTypeAssistant AgentType = "assistant"
+	AgentTypeBot       AgentType = "bot"
+	AgentTypeWebhook   AgentType = "webhook"
+	AgentTypeCustom    AgentType = "custom"
+)
+
+func (e *AgentType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = AgentType(s)
+	case string:
+		*e = AgentType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for AgentType: %T", src)
+	}
+	return nil
+}
+
+type NullAgentType struct {
+	AgentType AgentType `json:"agent_type"`
+	Valid     bool      `json:"valid"` // Valid is true if AgentType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullAgentType) Scan(value interface{}) error {
+	if value == nil {
+		ns.AgentType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.AgentType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullAgentType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.AgentType), nil
+}
+
 type ProjectRole string
 
 const (
@@ -57,6 +101,18 @@ func (ns NullProjectRole) Value() (driver.Value, error) {
 	return string(ns.ProjectRole), nil
 }
 
+// Global agents (AI assistants, bots, webhooks)
+type Agent struct {
+	ID   uuid.UUID `json:"id"`
+	Name string    `json:"name"`
+	Type AgentType `json:"type"`
+	// Agent configuration (API key, endpoint, model, etc.)
+	Config    []byte    `json:"config"`
+	CreatedBy uuid.UUID `json:"created_by"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
 // Projects table
 type Project struct {
 	ID          uuid.UUID   `json:"id"`
@@ -65,6 +121,18 @@ type Project struct {
 	OwnerID     uuid.UUID   `json:"owner_id"`
 	CreatedAt   time.Time   `json:"created_at"`
 	UpdatedAt   time.Time   `json:"updated_at"`
+}
+
+// Project-agent associations
+type ProjectAgent struct {
+	ID        uuid.UUID   `json:"id"`
+	ProjectID uuid.UUID   `json:"project_id"`
+	AgentID   uuid.UUID   `json:"agent_id"`
+	Role      ProjectRole `json:"role"`
+	// Project-level config override for agent
+	ConfigOverride []byte    `json:"config_override"`
+	CreatedBy      uuid.UUID `json:"created_by"`
+	CreatedAt      time.Time `json:"created_at"`
 }
 
 // Project member associations

@@ -7,6 +7,7 @@ package repository
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -116,6 +117,59 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User,
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const searchUsers = `-- name: SearchUsers :many
+SELECT id, email, username, avatar_url, created_at, updated_at
+FROM users
+WHERE 
+    email ILIKE '%' || $1::text || '%'
+    OR username ILIKE '%' || $1::text || '%'
+    OR id::text ILIKE '%' || $1::text || '%'
+ORDER BY 
+    CASE 
+        WHEN email ILIKE $1::text || '%' THEN 1
+        WHEN username ILIKE $1::text || '%' THEN 2
+        ELSE 3
+    END,
+    username
+LIMIT 10
+`
+
+type SearchUsersRow struct {
+	ID        uuid.UUID   `json:"id"`
+	Email     string      `json:"email"`
+	Username  string      `json:"username"`
+	AvatarUrl pgtype.Text `json:"avatar_url"`
+	CreatedAt time.Time   `json:"created_at"`
+	UpdatedAt time.Time   `json:"updated_at"`
+}
+
+func (q *Queries) SearchUsers(ctx context.Context, query string) ([]SearchUsersRow, error) {
+	rows, err := q.db.Query(ctx, searchUsers, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []SearchUsersRow{}
+	for rows.Next() {
+		var i SearchUsersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Email,
+			&i.Username,
+			&i.AvatarUrl,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const updateUser = `-- name: UpdateUser :one

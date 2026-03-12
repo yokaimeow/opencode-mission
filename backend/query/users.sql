@@ -31,3 +31,19 @@ RETURNING *;
 -- name: DeleteUser :exec
 DELETE FROM users
 WHERE id = $1;
+
+-- name: SearchUsers :many
+SELECT id, email, username, avatar_url, created_at, updated_at
+FROM users
+WHERE 
+    email ILIKE '%' || sqlc.arg('query')::text || '%'
+    OR username ILIKE '%' || sqlc.arg('query')::text || '%'
+    OR id::text ILIKE '%' || sqlc.arg('query')::text || '%'
+ORDER BY 
+    CASE 
+        WHEN email ILIKE sqlc.arg('query')::text || '%' THEN 1
+        WHEN username ILIKE sqlc.arg('query')::text || '%' THEN 2
+        ELSE 3
+    END,
+    username
+LIMIT 10;

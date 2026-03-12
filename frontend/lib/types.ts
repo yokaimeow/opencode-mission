@@ -78,3 +78,50 @@ export interface AddMemberRequest {
 export interface UpdateMemberRoleRequest {
   role: ProjectRole;
 }
+
+export type AgentType = 'assistant' | 'bot' | 'webhook' | 'custom';
+
+export interface Agent {
+  id: string;
+  name: string;
+  type: AgentType;
+  config?: Record<string, string>;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  creator?: {
+    id: string;
+    email: string;
+    username: string;
+    avatar_url?: string;
+  };
+}
+
+export interface CreateAgentRequest {
+  name: string;
+  type: AgentType;
+  config?: Record<string, string>;
+}
+
+export interface UpdateAgentRequest {
+  name?: string;
+  type?: AgentType;
+  config?: Record<string, string>;
+}
+
+export interface ProjectAgent {
+  id: string;
+  project_id: string;
+  agent_id: string;
+  role: ProjectRole;
+  config_override?: Record<string, string>;
+  created_by: string;
+  created_at: string;
+  agent?: Agent;
+}
+
+export interface AddProjectAgentRequest {
+  agent_id: string;
+  role: ProjectRole;
+  config_override?: Record<string, string>;
+}
