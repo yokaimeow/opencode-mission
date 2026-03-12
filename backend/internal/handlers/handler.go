@@ -20,6 +20,7 @@ import (
 type Handler struct {
 	authService    *services.AuthService
 	projectService *services.ProjectService
+	memberService  *services.ProjectMemberService
 	jwtManager     *auth.JWTManager
 	tokenBlacklist *services.TokenBlacklistService
 	db             *pgxpool.Pool
@@ -29,6 +30,7 @@ type Handler struct {
 func NewHandler(
 	authService *services.AuthService,
 	projectService *services.ProjectService,
+	memberService *services.ProjectMemberService,
 	jwtManager *auth.JWTManager,
 	tokenBlacklist *services.TokenBlacklistService,
 	db *pgxpool.Pool,
@@ -37,6 +39,7 @@ func NewHandler(
 	return &Handler{
 		authService:    authService,
 		projectService: projectService,
+		memberService:  memberService,
 		jwtManager:     jwtManager,
 		tokenBlacklist: tokenBlacklist,
 		db:             db,
@@ -461,4 +464,99 @@ func (h *Handler) UpdateTask(c *gin.Context) {
 
 func (h *Handler) DeleteTask(c *gin.Context) {
 	c.JSON(http.StatusNotImplemented, gin.H{"error": "not implemented"})
+}
+
+func (h *Handler) ListMembers(c *gin.Context) {
+	projectID := c.Param("id")
+	if projectID == "" {
+		utils.ErrorResponse(c, http.StatusBadRequest, "INVALID_INPUT", "Project ID is required")
+		return
+	}
+
+	members, err := h.memberService.GetMembers(c.Request.Context(), projectID)
+	if err != nil {
+		utils.ErrorResponseWithDetails(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to list members", err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, http.StatusOK, members)
+}
+
+func (h *Handler) AddMember(c *gin.Context) {
+	projectID := c.Param("id")
+	if projectID == "" {
+		utils.ErrorResponse(c, http.StatusBadRequest, "INVALID_INPUT", "Project ID is required")
+		return
+	}
+
+	var req models.AddMemberRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.ErrorResponseWithDetails(c, http.StatusBadRequest, "INVALID_INPUT", "Invalid request data", err.Error())
+		return
+	}
+
+	member, err := h.memberService.AddMember(c.Request.Context(), projectID, req.UserID, req.Role)
+	if err != nil {
+		if errors.Is(err, services.ErrMemberAlreadyExists) {
+			utils.ErrorResponse(c, http.StatusConflict, "CONFLICT", "Member already exists")
+			return
+		}
+		utils.ErrorResponseWithDetails(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to add member", err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, http.StatusCreated, member)
+}
+
+func (h *Handler) UpdateMemberRole(c *gin.Context) {
+	projectID := c.Param("id")
+	userID := c.Param("userId")
+	if projectID == "" || userID == "" {
+		utils.ErrorResponse(c, http.StatusBadRequest, "INVALID_INPUT", "Project ID and User ID are required")
+		return
+	}
+
+	var req models.UpdateMemberRoleRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.ErrorResponseWithDetails(c, http.StatusBadRequest, "INVALID_INPUT", "Invalid request data", err.Error())
+		return
+	}
+
+	member, err := h.memberService.UpdateMemberRole(c.Request.Context(), projectID, userID, req.Role)
+	if err != nil {
+		if errors.Is(err, services.ErrMemberNotFound) {
+			utils.ErrorResponse(c, http.StatusNotFound, "NOT_FOUND", "Member not found")
+			return
+		}
+		utils.ErrorResponseWithDetails(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to update member role", err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, http.StatusOK, member)
+}
+
+func (h *Handler) RemoveMember(c *gin.Context) {
+	projectID := c.Param("id")
+	userID := c.Param("userId")
+	if projectID == "" || userID == "" {
+		utils.ErrorResponse(c, http.StatusBadRequest, "INVALID_INPUT", "Project ID and User ID are required")
+		return
+	}
+
+	if err := h.memberService.RemoveMember(c.Request.Context(), projectID, userID); err != nil {
+		if errors.Is(err, services.ErrMemberNotFound) {
+			utils.ErrorResponse(c, http.StatusNotFound, "NOT_FOUND", "Member not found")
+			return
+		}
+		if errors.Is(err, services.ErrCannotRemoveOwner) {
+			utils.ErrorResponse(c, http.StatusBadRequest, "BAD_REQUEST", "Cannot remove project owner")
+			return
+		}
+		utils.ErrorResponseWithDetails(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to remove member", err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, http.StatusOK, gin.H{
+		"message": "Member removed successfully",
+	})
 }

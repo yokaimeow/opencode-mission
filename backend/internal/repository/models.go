@@ -5,11 +5,57 @@
 package repository
 
 import (
+	"database/sql/driver"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
+
+type ProjectRole string
+
+const (
+	ProjectRoleAdmin  ProjectRole = "admin"
+	ProjectRoleMember ProjectRole = "member"
+	ProjectRoleAgent  ProjectRole = "agent"
+	ProjectRoleGuest  ProjectRole = "guest"
+)
+
+func (e *ProjectRole) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ProjectRole(s)
+	case string:
+		*e = ProjectRole(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ProjectRole: %T", src)
+	}
+	return nil
+}
+
+type NullProjectRole struct {
+	ProjectRole ProjectRole `json:"project_role"`
+	Valid       bool        `json:"valid"` // Valid is true if ProjectRole is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullProjectRole) Scan(value interface{}) error {
+	if value == nil {
+		ns.ProjectRole, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ProjectRole.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullProjectRole) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ProjectRole), nil
+}
 
 // Projects table
 type Project struct {
@@ -19,6 +65,15 @@ type Project struct {
 	OwnerID     uuid.UUID   `json:"owner_id"`
 	CreatedAt   time.Time   `json:"created_at"`
 	UpdatedAt   time.Time   `json:"updated_at"`
+}
+
+// Project member associations
+type ProjectMember struct {
+	ProjectID uuid.UUID `json:"project_id"`
+	UserID    uuid.UUID `json:"user_id"`
+	// Member role: admin, member, agent, guest
+	Role      ProjectRole `json:"role"`
+	CreatedAt time.Time   `json:"created_at"`
 }
 
 // Users table

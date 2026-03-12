@@ -11,16 +11,22 @@ import (
 )
 
 type Querier interface {
+	AddProjectMember(ctx context.Context, arg AddProjectMemberParams) error
 	CreateProject(ctx context.Context, arg CreateProjectParams) (Project, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeleteProject(ctx context.Context, id uuid.UUID) error
+	DeleteProjectMember(ctx context.Context, arg DeleteProjectMemberParams) error
 	DeleteUser(ctx context.Context, id uuid.UUID) error
 	GetProjectByID(ctx context.Context, id uuid.UUID) (GetProjectByIDRow, error)
+	GetProjectMember(ctx context.Context, arg GetProjectMemberParams) (GetProjectMemberRow, error)
+	GetProjectMembers(ctx context.Context, projectID uuid.UUID) ([]GetProjectMembersRow, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id uuid.UUID) (User, error)
 	GetUserByUsername(ctx context.Context, username string) (User, error)
+	GetUserProjectRole(ctx context.Context, arg GetUserProjectRoleParams) (ProjectRole, error)
 	ListProjectsByOwner(ctx context.Context, ownerID uuid.UUID) ([]ListProjectsByOwnerRow, error)
 	UpdateProject(ctx context.Context, arg UpdateProjectParams) (Project, error)
+	UpdateProjectMemberRole(ctx context.Context, arg UpdateProjectMemberRoleParams) error
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
 }
 

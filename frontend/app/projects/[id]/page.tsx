@@ -1,10 +1,11 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { projectApi } from '@/lib/projects'
-import { Project } from '@/lib/types'
+import { memberApi } from '@/lib/members'
+import { Project, ProjectMember } from '@/lib/types'
 import { AppSidebar } from "@/components/app-sidebar"
 import { SiteHeader } from "@/components/site-header"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
@@ -70,35 +71,22 @@ const mockTasks: Task[] = [
   { id: '9', title: 'Security audit review', status: 'review', priority: 'medium', created_at: '2024-01-23' },
 ]
 
-// Mock members data
-interface Member {
-  id: string
-  username: string
-  email: string
-  avatar_url?: string
-  role: 'owner' | 'admin' | 'member'
-}
-
-const mockMembers: Member[] = [
-  { id: '1', username: 'john_doe', email: 'john@example.com', role: 'owner' },
-  { id: '2', username: 'jane_smith', email: 'jane@example.com', role: 'admin' },
-  { id: '3', username: 'bob_wilson', email: 'bob@example.com', role: 'member' },
-]
-
 export default function ProjectDetailPage() {
   const params = useParams()
   const router = useRouter()
   const { isLoading: authLoading, isAuthenticated } = useAuth()
   const [project, setProject] = useState<Project | null>(null)
+  const [members, setMembers] = useState<ProjectMember[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [tasks] = useState<Task[]>(mockTasks)
-  const [members] = useState<Member[]>(mockMembers)
   const [viewMode, setViewMode] = useState<'board' | 'list'>('board')
+  const loadingRef = useRef(false)
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       router.push('/auth/login')
-    } else if (isAuthenticated && params.id) {
+    } else if (isAuthenticated && params.id && !loadingRef.current) {
+      loadingRef.current = true
       loadProject()
     }
   }, [isAuthenticated, authLoading, params.id, router])
@@ -107,6 +95,8 @@ export default function ProjectDetailPage() {
     try {
       const data = await projectApi.get(params.id as string)
       setProject(data)
+      const memberData = await memberApi.list(params.id as string)
+      setMembers(memberData)
     } catch (error) {
       console.error('Failed to load project:', error)
       router.push('/projects')
@@ -154,14 +144,16 @@ export default function ProjectDetailPage() {
     return <Badge variant="outline" className={className}>{label}</Badge>
   }
 
-  const getRoleBadge = (role: Member['role']) => {
+  const getRoleBadge = (role: ProjectMember['role']) => {
     switch (role) {
-      case 'owner':
-        return <Badge variant="default" className="text-xs">Owner</Badge>
       case 'admin':
-        return <Badge variant="secondary" className="text-xs">Admin</Badge>
+        return <Badge variant="default" className="text-xs">Admin</Badge>
       case 'member':
-        return <Badge variant="outline" className="text-xs">Member</Badge>
+        return <Badge variant="secondary" className="text-xs">Member</Badge>
+      case 'agent':
+        return <Badge variant="outline" className="text-xs">Agent</Badge>
+      case 'guest':
+        return <Badge variant="outline" className="text-xs">Guest</Badge>
     }
   }
 
@@ -326,7 +318,7 @@ export default function ProjectDetailPage() {
                             <div className="space-y-2">
                               {members.map((member) => (
                                 <Card
-                                  key={member.id}
+                                  key={member.user_id}
                                   className="cursor-pointer hover:shadow-md transition-shadow"
                                 >
                                   <CardContent className="p-3">
@@ -336,13 +328,13 @@ export default function ProjectDetailPage() {
                                         <div className="flex items-center justify-between gap-2">
                                           <div className="flex items-center gap-2 min-w-0">
                                             <Avatar className="h-5 w-5 shrink-0">
-                                              <AvatarImage src={member.avatar_url} />
+                                              <AvatarImage src={member.user?.avatar_url} />
                                               <AvatarFallback className="text-[10px]">
-                                                {member.username.charAt(0).toUpperCase()}
+                                                {member.user?.username?.charAt(0).toUpperCase() || '?'}
                                               </AvatarFallback>
                                             </Avatar>
                                             <p className="text-sm font-medium truncate">
-                                              {member.username}
+                                              {member.user?.username || 'Unknown'}
                                             </p>
                                           </div>
                                           {getRoleBadge(member.role)}
@@ -379,7 +371,7 @@ export default function ProjectDetailPage() {
                             <div className="space-y-2">
                               {members.map((member) => (
                                 <Card
-                                  key={member.id}
+                                  key={member.user_id}
                                   className="cursor-pointer hover:shadow-md transition-shadow"
                                 >
                                   <CardContent className="p-3">
@@ -389,13 +381,13 @@ export default function ProjectDetailPage() {
                                         <div className="flex items-center justify-between gap-2">
                                           <div className="flex items-center gap-2 min-w-0">
                                             <Avatar className="h-5 w-5 shrink-0">
-                                              <AvatarImage src={member.avatar_url} />
+                                              <AvatarImage src={member.user?.avatar_url} />
                                               <AvatarFallback className="text-[10px]">
-                                                {member.username.charAt(0).toUpperCase()}
+                                                {member.user?.username?.charAt(0).toUpperCase() || '?'}
                                               </AvatarFallback>
                                             </Avatar>
                                             <p className="text-sm font-medium truncate">
-                                              {member.username}
+                                              {member.user?.username || 'Unknown'}
                                             </p>
                                           </div>
                                           {getRoleBadge(member.role)}

@@ -1,10 +1,11 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { projectApi } from '@/lib/projects'
-import { Project } from '@/lib/types'
+import { memberApi } from '@/lib/members'
+import { Project, ProjectMember } from '@/lib/types'
 import { AppSidebar } from "@/components/app-sidebar"
 import { SiteHeader } from "@/components/site-header"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
@@ -40,6 +41,7 @@ export default function ProjectSettingsPage() {
   const router = useRouter()
   const { isLoading: authLoading, isAuthenticated } = useAuth()
   const [project, setProject] = useState<Project | null>(null)
+  const [members, setMembers] = useState<ProjectMember[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
@@ -47,11 +49,13 @@ export default function ProjectSettingsPage() {
     name: '',
     description: '',
   })
+  const loadingRef = useRef(false)
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       router.push('/auth/login')
-    } else if (isAuthenticated && params.id) {
+    } else if (isAuthenticated && params.id && !loadingRef.current) {
+      loadingRef.current = true
       loadProject()
     }
   }, [isAuthenticated, authLoading, params.id, router])
@@ -64,6 +68,8 @@ export default function ProjectSettingsPage() {
         name: data.name,
         description: data.description || '',
       })
+      const memberData = await memberApi.list(params.id as string)
+      setMembers(memberData)
     } catch (error) {
       console.error('Failed to load project:', error)
       router.push('/projects')

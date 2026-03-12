@@ -54,3 +54,27 @@ export interface ApiError {
   error: string;
   message: string;
 }
+
+export type ProjectRole = 'admin' | 'member' | 'agent' | 'guest';
+
+export interface ProjectMember {
+  project_id: string;
+  user_id: string;
+  role: ProjectRole;
+  created_at: string;
+  user?: {
+    id: string;
+    email: string;
+    username: string;
+    avatar_url?: string;
+  };
+}
+
+export interface AddMemberRequest {
+  user_id: string;
+  role: ProjectRole;
+}
+
+export interface UpdateMemberRoleRequest {
+  role: ProjectRole;
+}
