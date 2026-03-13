@@ -33,7 +33,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeftIcon, PencilIcon, TrashIcon, CalendarIcon, UserIcon } from "lucide-react"
+import { ArrowLeftIcon, PencilIcon, TrashIcon, CalendarIcon, UserIcon, UserMinusIcon } from "lucide-react"
 import { Loading } from "@/components/loading"
 
 export default function ProjectSettingsPage() {
@@ -45,6 +45,8 @@ export default function ProjectSettingsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [memberToRemove, setMemberToRemove] = useState<ProjectMember | null>(null)
+  const [isRemoveMemberDialogOpen, setIsRemoveMemberDialogOpen] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -99,6 +101,19 @@ export default function ProjectSettingsPage() {
       router.push('/projects')
     } catch (error) {
       console.error('Failed to delete project:', error)
+    }
+  }
+
+  const handleRemoveMember = async () => {
+    if (!project || !memberToRemove) return
+
+    try {
+      await memberApi.remove(project.id, memberToRemove.user_id)
+      setMembers(members.filter(m => m.user_id !== memberToRemove.user_id))
+      setIsRemoveMemberDialogOpen(false)
+      setMemberToRemove(null)
+    } catch (error) {
+      console.error('Failed to remove member:', error)
     }
   }
 
@@ -243,26 +258,44 @@ export default function ProjectSettingsPage() {
                         Manage who has access to this project
                       </CardDescription>
                     </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center gap-4 p-4 border rounded-lg">
-                        {project.owner ? (
-                          <>
-                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                              <UserIcon className="h-5 w-5 text-primary" />
-                            </div>
-                            <div className="flex-1">
-                              <p className="font-medium">{project.owner.username}</p>
-                              <p className="text-sm text-muted-foreground">{project.owner.email}</p>
-                            </div>
-                            <Badge>Owner</Badge>
-                          </>
-                        ) : (
-                          <p className="text-muted-foreground">Owner information not available</p>
-                        )}
-                      </div>
-                      <p className="text-sm text-muted-foreground mt-4">
-                        Member management coming soon...
-                      </p>
+                    <CardContent className="space-y-3">
+                      {members.map((member) => (
+                        <div key={member.user_id} className="flex items-center gap-4 p-4 border rounded-lg">
+                          <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                            <UserIcon className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-medium">
+                              {member.user?.username || 'Unknown User'}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {member.user?.email || member.user_id}
+                            </p>
+                          </div>
+                          <Badge variant={member.role === 'admin' ? 'default' : 'secondary'} className="capitalize">
+                            {member.role}
+                          </Badge>
+                          {member.role !== 'admin' && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-muted-foreground hover:text-destructive"
+                              onClick={() => {
+                                setMemberToRemove(member)
+                                setIsRemoveMemberDialogOpen(true)
+                              }}
+                            >
+                              <UserMinusIcon className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+
+                      {members.length === 0 && (
+                        <p className="text-sm text-muted-foreground text-center py-4">
+                          No members yet
+                        </p>
+                      )}
                     </CardContent>
                   </Card>
 
@@ -360,6 +393,28 @@ export default function ProjectSettingsPage() {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={isRemoveMemberDialogOpen} onOpenChange={setIsRemoveMemberDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Member</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove {memberToRemove?.user?.username || 'this user'} from the project?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setMemberToRemove(null)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleRemoveMember}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Remove
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
