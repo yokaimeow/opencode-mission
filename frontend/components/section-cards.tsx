@@ -1,5 +1,6 @@
 "use client"
 
+import { useMemo } from "react"
 import { Badge } from "@/components/ui/badge"
 import {
   Card,
@@ -10,26 +11,42 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { TrendingUpIcon, TrendingDownIcon, FolderIcon, CheckCircle2Icon, BotIcon, ActivityIcon } from "lucide-react"
+import { useProjects } from "@/hooks/useProjects"
+
+function getWeekStart(date: Date): Date {
+  const d = new Date(date)
+  const day = d.getDay()
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1)
+  return new Date(d.setDate(diff))
+}
 
 export function SectionCards() {
+  const { projects, isLoading } = useProjects()
+
+  const newThisWeek = useMemo(() => {
+    const weekStart = getWeekStart(new Date())
+    weekStart.setHours(0, 0, 0, 0)
+    return projects.filter((p) => new Date(p.created_at) >= weekStart).length
+  }, [projects])
+
   return (
     <div className="grid grid-cols-1 gap-4 px-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card *:data-[slot=card]:shadow-xs lg:px-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-4 dark:*:data-[slot=card]:bg-card">
       <Card className="@container/card">
         <CardHeader>
           <CardDescription>Active Projects</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            12
+            {isLoading ? '-' : projects.length}
           </CardTitle>
           <CardAction>
             <Badge variant="outline">
               <TrendingUpIcon />
-              +3
+              +{isLoading ? 0 : newThisWeek}
             </Badge>
           </CardAction>
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
           <div className="line-clamp-1 flex gap-2 font-medium">
-            3 new this week{" "}
+            {isLoading ? 'Loading...' : `${newThisWeek} new this week`}{" "}
             <FolderIcon className="size-4" />
           </div>
           <div className="text-muted-foreground">
