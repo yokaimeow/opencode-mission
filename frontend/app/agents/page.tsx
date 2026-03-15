@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from 'react'
+import { useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { useRouter } from 'next/navigation'
 import { useAgents } from '@/features/agents'
@@ -55,7 +55,6 @@ export default function AgentsPage() {
   const {
     agents,
     isLoading: agentsLoading,
-    loadAgents,
     createAgent,
     updateAgent,
     deleteAgent,
@@ -66,16 +65,11 @@ export default function AgentsPage() {
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null)
   const [selectedAgents, setSelectedAgents] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const hasLoadedRef = useRef(false)
 
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      router.push('/auth/login')
-    } else if (isAuthenticated && !hasLoadedRef.current) {
-      hasLoadedRef.current = true
-      loadAgents()
-    }
-  }, [isAuthenticated, authLoading, router, loadAgents])
+  if (!authLoading && !isAuthenticated) {
+    router.push('/auth/login')
+    return null
+  }
 
   const handleCreateAgent = async (data: CreateAgentRequest | UpdateAgentRequest) => {
     setIsSubmitting(true)

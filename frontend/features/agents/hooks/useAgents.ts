@@ -1,95 +1,91 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { agentApi } from '@/lib/agents'
-import { Agent, CreateAgentRequest, UpdateAgentRequest, AgentType } from '@/lib/types'
+import { Agent, CreateAgentRequest, UpdateAgentRequest } from '@/lib/types'
 
-interface UseAgentsState {
+interface UseAgentsReturn {
   agents: Agent[]
   isLoading: boolean
   error: string | null
-}
-
-interface UseAgentsActions {
-  loadAgents: () => Promise<void>
+  refetch: () => Promise<void>
   createAgent: (data: CreateAgentRequest) => Promise<Agent | null>
   updateAgent: (id: string, data: UpdateAgentRequest) => Promise<Agent | null>
   deleteAgent: (id: string) => Promise<boolean>
-  clearError: () => void
 }
 
-export function useAgents(): UseAgentsState & UseAgentsActions {
-  const [agents, setAgents] = useState<Agent[]>([])
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+export function useAgents(): UseAgentsReturn {
+  const queryClient = useQueryClient()
 
-  const loadAgents = useCallback(async () => {
-    setIsLoading(true)
-    setError(null)
-    try {
-      const data = await agentApi.list()
-      setAgents(data)
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to load agents'
-      setError(message)
-    } finally {
-      setIsLoading(false)
-    }
-  }, [])
+  const { data: agents = [], isLoading, error, refetch } = useQuery({
+    queryKey: ['agents'],
+    queryFn: () => agentApi.list(),
+  })
 
-  const createAgent = useCallback(async (data: CreateAgentRequest): Promise<Agent | null> => {
-    setError(null)
+  const createMutation = useMutation({
+    mutationFn: (data: CreateAgentRequest) => agentApi.create(data),
+    onSuccess: (newAgent) => {
+      queryClient.setQueryData<Agent[]>(['agents'], (old) => 
+        old ? [...old, newAgent] : [newAgent]
+      )
+    },
+  })
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: UpdateAgentRequest }) => 
+      agentApi.update(id, data),
+    onSuccess: (updatedAgent) => {
+      queryClient.setQueryData<Agent[]>(['agents'], (old) =>
+        old ? old.map((a) => (a.id === updatedAgent.id ? updatedAgent : a)) : [updatedAgent]
+      )
+    },
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => agentApi.delete(id),
+    onSuccess: (_, deletedId) => {
+      queryClient.setQueryData<Agent[]>(['agents'], (old) =>
+        old ? old.filter((a) => a.id !== deletedId) : []
+      )
+    },
+  })
+
+  const createAgent = async (data: CreateAgentRequest): Promise<Agent | null> => {
     try {
-      const agent = await agentApi.create(data)
-      setAgents((prev) => [...prev, agent])
-      return agent
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to create agent'
-      setError(message)
+      return await createMutation.mutateAsync(data)
+    } catch {
       return null
     }
-  }, [])
+  }
 
-  const updateAgent = useCallback(async (id: string, data: UpdateAgentRequest): Promise<Agent | null> => {
-    setError(null)
+  const updateAgent = async (id: string, data: UpdateAgentRequest): Promise<Agent | null> => {
     try {
-      const agent = await agentApi.update(id, data)
-      setAgents((prev) => prev.map((a) => (a.id === id ? agent : a)))
-      return agent
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to update agent'
-      setError(message)
+      return await updateMutation.mutateAsync({ id, data })
+    } catch {
       return null
     }
-  }, [])
+  }
 
-  const deleteAgent = useCallback(async (id: string): Promise<boolean> => {
-    setError(null)
+  const deleteAgent = async (id: string): Promise<boolean> => {
     try {
-      await agentApi.delete(id)
-      setAgents((prev) => prev.filter((a) => a.id !== id))
+      await deleteMutation.mutateAsync(id)
       return true
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to delete agent'
-      setError(message)
+    } catch {
       return false
     }
-  }, [])
-
-  const clearError = useCallback(() => {
-    setError(null)
-  }, [])
+  }
 
   return {
     agents,
     isLoading,
-    error,
-    loadAgents,
+    error: error?.message ?? null,
+    refetch: async () => {
+      await refetch()
+    },
     createAgent,
     updateAgent,
     deleteAgent,
-    clearError,
   }
 }
 
-export type { Agent, CreateAgentRequest, UpdateAgentRequest, AgentType }
+export type { Agent, CreateAgentRequest, UpdateAgentRequest }

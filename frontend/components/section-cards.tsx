@@ -10,8 +10,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { TrendingUpIcon, TrendingDownIcon, FolderIcon, CheckCircle2Icon, BotIcon, ActivityIcon } from "lucide-react"
+import { TrendingUpIcon, FolderIcon, CheckCircle2Icon, BotIcon, ActivityIcon } from "lucide-react"
 import { useProjects } from "@/hooks/useProjects"
+import { useAgents } from "@/features/agents"
 
 function getWeekStart(date: Date): Date {
   const d = new Date(date)
@@ -22,6 +23,7 @@ function getWeekStart(date: Date): Date {
 
 export function SectionCards() {
   const { projects, isLoading } = useProjects()
+  const { agents, isLoading: isLoadingAgents } = useAgents()
 
   const newThisWeek = useMemo(() => {
     const weekStart = getWeekStart(new Date())
@@ -81,22 +83,22 @@ export function SectionCards() {
         <CardHeader>
           <CardDescription>AI Agents Active</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            8
+            {isLoadingAgents ? '-' : agents.length}
           </CardTitle>
           <CardAction>
             <Badge variant="outline">
               <ActivityIcon />
-              Running
+              {isLoadingAgents ? 'Loading' : (agents.length > 0 ? 'Active' : 'No agents')}
             </Badge>
           </CardAction>
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
           <div className="line-clamp-1 flex gap-2 font-medium">
-            All agents operational{" "}
+            {isLoadingAgents ? 'Loading...' : `${agents.length} agents configured`}{" "}
             <BotIcon className="size-4" />
           </div>
           <div className="text-muted-foreground">
-            Currently processing tasks
+            Currently available agents
           </div>
         </CardFooter>
       </Card>
