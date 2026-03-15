@@ -5,7 +5,8 @@ import { useParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { projectApi } from '@/lib/projects'
 import { memberApi } from '@/lib/members'
-import { Project, ProjectMember } from '@/lib/types'
+import { agentApi } from '@/lib/agents'
+import { Project, ProjectMember, ProjectAgent } from '@/lib/types'
 import { AppSidebar } from "@/components/app-sidebar"
 import { SiteHeader } from "@/components/site-header"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
@@ -33,7 +34,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeftIcon, PencilIcon, TrashIcon, CalendarIcon, UserIcon, UserMinusIcon } from "lucide-react"
+import { ArrowLeftIcon, PencilIcon, TrashIcon, CalendarIcon, UserIcon, UserMinusIcon, BotIcon } from "lucide-react"
 import { Loading } from "@/components/loading"
 
 export default function ProjectSettingsPage() {
@@ -42,11 +43,14 @@ export default function ProjectSettingsPage() {
   const { isLoading: authLoading, isAuthenticated } = useAuth()
   const [project, setProject] = useState<Project | null>(null)
   const [members, setMembers] = useState<ProjectMember[]>([])
+  const [projectAgents, setProjectAgents] = useState<ProjectAgent[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [memberToRemove, setMemberToRemove] = useState<ProjectMember | null>(null)
   const [isRemoveMemberDialogOpen, setIsRemoveMemberDialogOpen] = useState(false)
+  const [agentToRemove, setAgentToRemove] = useState<ProjectAgent | null>(null)
+  const [isRemoveAgentDialogOpen, setIsRemoveAgentDialogOpen] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -72,6 +76,8 @@ export default function ProjectSettingsPage() {
       })
       const memberData = await memberApi.list(params.id as string)
       setMembers(memberData)
+      const agentData = await agentApi.listProjectAgents(params.id as string)
+      setProjectAgents(agentData)
     } catch (error) {
       console.error('Failed to load project:', error)
       router.push('/projects')
@@ -114,6 +120,19 @@ export default function ProjectSettingsPage() {
       setMemberToRemove(null)
     } catch (error) {
       console.error('Failed to remove member:', error)
+    }
+  }
+
+  const handleRemoveAgent = async () => {
+    if (!project || !agentToRemove) return
+
+    try {
+      await agentApi.removeFromProject(project.id, agentToRemove.agent_id)
+      setProjectAgents(projectAgents.filter(pa => pa.agent_id !== agentToRemove.agent_id))
+      setIsRemoveAgentDialogOpen(false)
+      setAgentToRemove(null)
+    } catch (error) {
+      console.error('Failed to remove agent:', error)
     }
   }
 
@@ -291,7 +310,37 @@ export default function ProjectSettingsPage() {
                         </div>
                       ))}
 
-                      {members.length === 0 && (
+                      {projectAgents.map((pa) => (
+                        <div key={pa.id} className="flex items-center gap-4 p-4 border rounded-lg">
+                          <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                            <BotIcon className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-medium">
+                              {pa.agent?.name || 'Unknown Agent'}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              {pa.agent?.type || 'Agent'}
+                            </p>
+                          </div>
+                          <Badge variant="outline" className="capitalize">
+                            {pa.role}
+                          </Badge>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-muted-foreground hover:text-destructive"
+                            onClick={() => {
+                              setAgentToRemove(pa)
+                              setIsRemoveAgentDialogOpen(true)
+                            }}
+                          >
+                            <UserMinusIcon className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+
+                      {members.length === 0 && projectAgents.length === 0 && (
                         <p className="text-sm text-muted-foreground text-center py-4">
                           No members yet
                         </p>
@@ -412,6 +461,28 @@ export default function ProjectSettingsPage() {
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleRemoveMember}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={isRemoveAgentDialogOpen} onOpenChange={setIsRemoveAgentDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Agent</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove {agentToRemove?.agent?.name || 'this agent'} from the project?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setAgentToRemove(null)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleRemoveAgent}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Remove
