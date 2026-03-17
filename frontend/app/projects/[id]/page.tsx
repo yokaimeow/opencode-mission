@@ -6,7 +6,9 @@ import { useAuth } from '@/hooks/useAuth'
 import { projectApi } from '@/lib/projects'
 import { memberApi } from '@/lib/members'
 import { agentApi } from '@/lib/agents'
+import { useTasks, taskApi } from '@/features/tasks'
 import { Project, ProjectMember, ProjectAgent } from '@/lib/types'
+import type { Task, TaskStatus, TaskPriority } from '@/features/tasks'
 import { AppSidebar } from "@/components/app-sidebar"
 import { SiteHeader } from "@/components/site-header"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
@@ -17,6 +19,9 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Checkbox } from "@/components/ui/checkbox"
 import { AddMemberDialog } from "@/components/add-member-dialog"
+import { AddTaskDialog } from "@/components/add-task-dialog"
+import { EditTaskDialog } from "@/components/edit-task-dialog"
+import { TaskTable } from "@/components/task-table"
 import {
   SettingsIcon,
   UserIcon,
@@ -29,12 +34,27 @@ import {
   LayoutGridIcon,
   ListIcon,
   BotIcon,
+  EyeIcon,
+  XCircleIcon,
 } from "lucide-react"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
@@ -47,32 +67,6 @@ import {
 } from "@/components/ui/table"
 import { Loading } from "@/components/loading"
 
-interface Task {
-  id: string
-  title: string
-  description?: string
-  status: 'todo' | 'in_progress' | 'review' | 'done'
-  priority: 'low' | 'medium' | 'high'
-  assignee?: {
-    id: string
-    username: string
-    avatar_url?: string
-  }
-  created_at: string
-}
-
-const mockTasks: Task[] = [
-  { id: '1', title: 'Setup project structure', status: 'done', priority: 'high', created_at: '2024-01-15' },
-  { id: '2', title: 'Implement authentication', status: 'done', priority: 'high', created_at: '2024-01-16' },
-  { id: '3', title: 'Create dashboard UI', status: 'in_progress', priority: 'medium', created_at: '2024-01-17' },
-  { id: '4', title: 'Add task management', status: 'in_progress', priority: 'high', created_at: '2024-01-18' },
-  { id: '5', title: 'Write documentation', status: 'todo', priority: 'low', created_at: '2024-01-19' },
-  { id: '6', title: 'Setup CI/CD pipeline', status: 'todo', priority: 'medium', created_at: '2024-01-20' },
-  { id: '7', title: 'Add unit tests', status: 'todo', priority: 'high', created_at: '2024-01-21' },
-  { id: '8', title: 'Code review: API endpoints', status: 'review', priority: 'high', created_at: '2024-01-22' },
-  { id: '9', title: 'Security audit review', status: 'review', priority: 'medium', created_at: '2024-01-23' },
-]
-
 export default function ProjectDetailPage() {
   const params = useParams()
   const router = useRouter()
@@ -81,10 +75,16 @@ export default function ProjectDetailPage() {
   const [members, setMembers] = useState<ProjectMember[]>([])
   const [projectAgents, setProjectAgents] = useState<ProjectAgent[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [tasks] = useState<Task[]>(mockTasks)
   const [viewMode, setViewMode] = useState<'board' | 'list'>('board')
   const [showAddDialog, setShowAddDialog] = useState(false)
+  const [showAddTaskDialog, setShowAddTaskDialog] = useState(false)
+  const [showEditTaskDialog, setShowEditTaskDialog] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
   const loadingRef = useRef(false)
+
+  const { tasks, isLoading: tasksLoading, refetch: refetchTasks } = useTasks(params.id as string)
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -115,42 +115,81 @@ export default function ProjectDetailPage() {
     loadProject()
   }
 
-  const getTasksByStatus = (status: Task['status']) => {
+  const handleEditTask = (task: Task) => {
+    setSelectedTask(task)
+    setShowEditTaskDialog(true)
+  }
+
+  const handleDeleteClick = (task: Task) => {
+    setSelectedTask(task)
+    setShowDeleteConfirm(true)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!selectedTask) return
+    setIsDeleting(true)
+    try {
+      await taskApi.delete(selectedTask.id)
+      setShowDeleteConfirm(false)
+      setSelectedTask(null)
+      refetchTasks()
+    } catch (error) {
+      console.error('Failed to delete task:', error)
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  const handleStatusChange = async (task: Task, newStatus: TaskStatus) => {
+    try {
+      await taskApi.update(task.id, { status: newStatus })
+      refetchTasks()
+    } catch (error) {
+      console.error('Failed to update task status:', error)
+    }
+  }
+
+  const getTasksByStatus = (status: TaskStatus) => {
     return tasks.filter(task => task.status === status)
   }
 
-  const getStatusIcon = (status: Task['status']) => {
+  const getStatusIcon = (status: TaskStatus) => {
     switch (status) {
       case 'todo':
         return <CircleIcon className="h-4 w-4 text-muted-foreground" />
       case 'in_progress':
         return <LoaderIcon className="h-4 w-4 text-blue-500 animate-spin" />
-      case 'review':
-        return <CircleIcon className="h-4 w-4 text-orange-500 fill-orange-500" />
+      case 'in_review':
+        return <EyeIcon className="h-4 w-4 text-purple-500" />
       case 'done':
         return <CircleCheckIcon className="h-4 w-4 text-green-500" />
+      case 'cancelled':
+        return <XCircleIcon className="h-4 w-4 text-gray-500" />
     }
   }
 
-  const getPriorityColor = (priority: Task['priority']) => {
+  const getPriorityColor = (priority: TaskPriority) => {
     switch (priority) {
+      case 'urgent':
+        return 'text-red-600 dark:text-red-400'
       case 'high':
-        return 'text-red-500'
+        return 'text-orange-600 dark:text-orange-400'
       case 'medium':
-        return 'text-yellow-500'
+        return 'text-yellow-600 dark:text-yellow-400'
       case 'low':
-        return 'text-gray-500'
+        return 'text-gray-600 dark:text-gray-400'
     }
   }
 
-  const getStatusBadge = (status: Task['status']) => {
-    const config = {
+  const getStatusBadge = (status: TaskStatus) => {
+    const config: Record<TaskStatus, { label: string; className: string }> = {
       todo: { label: 'To Do', className: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' },
       in_progress: { label: 'In Progress', className: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' },
-      review: { label: 'Review', className: 'bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300' },
+      in_review: { label: 'In Review', className: 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300' },
       done: { label: 'Done', className: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' },
+      cancelled: { label: 'Cancelled', className: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' },
     }
-    const { label, className } = config[status]
+    const { label, className } = config[status] || config.todo
     return <Badge variant="outline" className={className}>{label}</Badge>
   }
 
@@ -166,6 +205,50 @@ export default function ProjectDetailPage() {
         return <Badge variant="outline" className="text-xs">Guest</Badge>
     }
   }
+
+  const statusOptions: { value: TaskStatus; label: string }[] = [
+    { value: 'todo', label: 'To Do' },
+    { value: 'in_progress', label: 'In Progress' },
+    { value: 'in_review', label: 'In Review' },
+    { value: 'done', label: 'Done' },
+    { value: 'cancelled', label: 'Cancelled' },
+  ]
+
+  const renderTaskMenu = (task: Task) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0">
+          <MoreHorizontalIcon className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-40">
+        <DropdownMenuItem onClick={() => handleEditTask(task)}>
+          Edit
+        </DropdownMenuItem>
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>Change Status</DropdownMenuSubTrigger>
+          <DropdownMenuSubContent>
+            {statusOptions.map((option) => (
+              <DropdownMenuItem
+                key={option.value}
+                onClick={() => handleStatusChange(task, option.value)}
+                disabled={task.status === option.value}
+              >
+                {option.label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+        <DropdownMenuSeparator />
+<DropdownMenuItem 
+          variant="destructive"
+          onClick={() => handleDeleteClick(task)}
+        >
+          Delete
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
 
   const renderMembersList = (isCompact: boolean = false) => {
     const totalMembers = members.length + projectAgents.length
@@ -264,10 +347,10 @@ export default function ProjectDetailPage() {
   }
 
   const columns = [
-    { id: 'todo', title: 'To Do', status: 'todo' as const },
-    { id: 'in_progress', title: 'In Progress', status: 'in_progress' as const },
-    { id: 'review', title: 'Review', status: 'review' as const },
-    { id: 'done', title: 'Done', status: 'done' as const },
+    { id: 'todo', title: 'To Do', status: 'todo' as TaskStatus },
+    { id: 'in_progress', title: 'In Progress', status: 'in_progress' as TaskStatus },
+    { id: 'in_review', title: 'In Review', status: 'in_review' as TaskStatus },
+    { id: 'done', title: 'Done', status: 'done' as TaskStatus },
   ]
 
   return (
@@ -313,7 +396,7 @@ export default function ProjectDetailPage() {
                       List
                     </Button>
                   </div>
-                  <Button size="sm">
+                  <Button size="sm" onClick={() => setShowAddTaskDialog(true)}>
                     <PlusIcon className="h-4 w-4" />
                   </Button>
                   <Button
@@ -327,8 +410,8 @@ export default function ProjectDetailPage() {
               </div>
 
               <div className="px-4 lg:px-6 py-6">
-                  {viewMode === 'board' ? (
-                    <>
+                {viewMode === 'board' ? (
+                  <>
                     <div className="flex gap-4">
                       <div className="flex-1 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
                         {columns.map((column) => (
@@ -362,18 +445,7 @@ export default function ProjectDetailPage() {
                                               <p className="text-sm font-medium truncate">
                                                 {task.title}
                                               </p>
-                                              <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                  <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0">
-                                                    <MoreHorizontalIcon className="h-4 w-4" />
-                                                  </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                  <DropdownMenuItem>Edit</DropdownMenuItem>
-                                                  <DropdownMenuItem>Change Status</DropdownMenuItem>
-                                                  <DropdownMenuItem>Delete</DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                              </DropdownMenu>
+                                              {renderTaskMenu(task)}
                                             </div>
                                             <div className="flex items-center gap-2 mt-2">
                                               <span className={`text-xs font-medium ${getPriorityColor(task.priority)}`}>
@@ -406,82 +478,14 @@ export default function ProjectDetailPage() {
                     <div className="mt-4 xl:hidden">
                       {renderMembersList(true)}
                     </div>
-                    </>
-                  ) : (
-                    <div className="overflow-hidden rounded-lg border">
-                      <Table>
-                        <TableHeader className="sticky top-0 z-10 bg-muted">
-                          <TableRow>
-                            <TableHead className="w-12">
-                              <Checkbox aria-label="Select all" />
-                            </TableHead>
-                            <TableHead>Task</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Priority</TableHead>
-                            <TableHead>Assignee</TableHead>
-                            <TableHead>Created</TableHead>
-                            <TableHead className="w-12"></TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {tasks.map((task) => (
-                            <TableRow key={task.id} className="cursor-pointer">
-                              <TableCell>
-                                <Checkbox aria-label="Select row" />
-                              </TableCell>
-                              <TableCell className="font-medium">{task.title}</TableCell>
-                              <TableCell>{getStatusBadge(task.status)}</TableCell>
-                              <TableCell>
-                                <span className={`text-sm font-medium ${getPriorityColor(task.priority)}`}>
-                                  {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
-                                </span>
-                              </TableCell>
-                              <TableCell>
-                                {task.assignee ? (
-                                  <div className="flex items-center gap-2">
-                                    <Avatar className="h-6 w-6">
-                                      <AvatarImage src={task.assignee.avatar_url} />
-                                      <AvatarFallback className="text-xs">
-                                        {task.assignee.username.charAt(0).toUpperCase()}
-                                      </AvatarFallback>
-                                    </Avatar>
-                                    <span className="text-sm">{task.assignee.username}</span>
-                                  </div>
-                                ) : (
-                                  <span className="text-sm text-muted-foreground">Unassigned</span>
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                <span className="text-sm text-muted-foreground">
-                                  {new Date(task.created_at).toLocaleDateString()}
-                                </span>
-                              </TableCell>
-                              <TableCell>
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      className="flex size-8 text-muted-foreground data-[state=open]:bg-muted"
-                                      size="icon"
-                                    >
-                                      <MoreHorizontalIcon />
-                                      <span className="sr-only">Open menu</span>
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end" className="w-32">
-                                    <DropdownMenuItem>Edit</DropdownMenuItem>
-                                    <DropdownMenuItem>Change Status</DropdownMenuItem>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem variant="destructive">Delete</DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                    )}
+                  </>
+                ) : (
+                  <TaskTable 
+                    tasks={tasks} 
+                    isLoading={tasksLoading} 
+                    onDelete={() => refetchTasks()} 
+                  />
+                )}
               </div>
             </div>
           </div>
@@ -494,6 +498,46 @@ export default function ProjectDetailPage() {
         projectId={project.id}
         onSuccess={handleAddSuccess}
       />
+      
+      <AddTaskDialog
+        open={showAddTaskDialog}
+        onOpenChange={setShowAddTaskDialog}
+        projectId={project.id}
+        members={members}
+        projectAgents={projectAgents}
+        onSuccess={refetchTasks}
+      />
+
+      <EditTaskDialog
+        open={showEditTaskDialog}
+        onOpenChange={setShowEditTaskDialog}
+        task={selectedTask}
+        members={members}
+        projectAgents={projectAgents}
+        onSuccess={refetchTasks}
+      />
+
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Task</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{selectedTask?.title}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={handleDeleteConfirm}
+              disabled={isDeleting}
+            >
+              {isDeleting && <LoaderIcon className="h-4 w-4 animate-spin mr-2" />}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </TooltipProvider>
   )
 }

@@ -76,6 +76,7 @@ func main() {
 	memberRepo := repository.NewProjectMemberRepository(pool)
 	agentRepo := repository.NewAgentRepository(pool)
 	projectAgentRepo := repository.NewProjectAgentRepository(pool)
+	taskRepo := repository.NewTaskRepository(pool)
 	jwtManager := auth.NewJWTManager(
 		cfg.JWT.AccessTokenSecret,
 		cfg.JWT.RefreshTokenSecret,
@@ -87,8 +88,9 @@ func main() {
 	projectService := services.NewProjectService(projectRepo)
 	memberService := services.NewProjectMemberService(memberRepo, projectRepo)
 	agentService := services.NewAgentService(agentRepo, projectAgentRepo)
+	taskService := services.NewTaskService(taskRepo, projectRepo, memberRepo)
 
-	h := handlers.NewHandler(authService, projectService, memberService, agentService, jwtManager, tokenBlacklist, pool, valkeyClient)
+	h := handlers.NewHandler(authService, projectService, memberService, agentService, taskService, jwtManager, tokenBlacklist, pool, valkeyClient)
 
 	gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()
@@ -147,6 +149,7 @@ func main() {
 
 			protected.GET("/projects/:id/tasks", h.ListTasks)
 			protected.POST("/projects/:id/tasks", h.CreateTask)
+			protected.GET("/tasks", h.ListUserTasks)
 			protected.GET("/tasks/:id", h.GetTask)
 			protected.PATCH("/tasks/:id", h.UpdateTask)
 			protected.DELETE("/tasks/:id", h.DeleteTask)

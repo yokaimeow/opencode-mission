@@ -15,11 +15,13 @@ type Querier interface {
 	AddProjectMember(ctx context.Context, arg AddProjectMemberParams) error
 	CreateAgent(ctx context.Context, arg CreateAgentParams) (Agent, error)
 	CreateProject(ctx context.Context, arg CreateProjectParams) (Project, error)
+	CreateTask(ctx context.Context, arg CreateTaskParams) (Task, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeleteAgent(ctx context.Context, id uuid.UUID) error
 	DeleteProject(ctx context.Context, id uuid.UUID) error
 	DeleteProjectAgent(ctx context.Context, arg DeleteProjectAgentParams) error
 	DeleteProjectMember(ctx context.Context, arg DeleteProjectMemberParams) error
+	DeleteTask(ctx context.Context, id uuid.UUID) error
 	DeleteUser(ctx context.Context, id uuid.UUID) error
 	GetAgent(ctx context.Context, id uuid.UUID) (GetAgentRow, error)
 	GetProjectAgent(ctx context.Context, arg GetProjectAgentParams) (GetProjectAgentRow, error)
@@ -28,16 +30,20 @@ type Querier interface {
 	GetProjectByID(ctx context.Context, id uuid.UUID) (GetProjectByIDRow, error)
 	GetProjectMember(ctx context.Context, arg GetProjectMemberParams) (GetProjectMemberRow, error)
 	GetProjectMembers(ctx context.Context, projectID uuid.UUID) ([]GetProjectMembersRow, error)
+	GetTaskByID(ctx context.Context, id uuid.UUID) (GetTaskByIDRow, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id uuid.UUID) (User, error)
 	GetUserByUsername(ctx context.Context, username string) (User, error)
 	GetUserProjectRole(ctx context.Context, arg GetUserProjectRoleParams) (ProjectRole, error)
 	ListAgentsByCreator(ctx context.Context, createdBy uuid.UUID) ([]ListAgentsByCreatorRow, error)
 	ListProjectsByOwner(ctx context.Context, ownerID uuid.UUID) ([]ListProjectsByOwnerRow, error)
+	ListTasksByProject(ctx context.Context, projectID uuid.UUID) ([]ListTasksByProjectRow, error)
+	ListTasksByUser(ctx context.Context, userID uuid.UUID) ([]ListTasksByUserRow, error)
 	SearchUsers(ctx context.Context, query string) ([]SearchUsersRow, error)
 	UpdateAgent(ctx context.Context, arg UpdateAgentParams) error
 	UpdateProject(ctx context.Context, arg UpdateProjectParams) (Project, error)
 	UpdateProjectMemberRole(ctx context.Context, arg UpdateProjectMemberRoleParams) error
+	UpdateTask(ctx context.Context, arg UpdateTaskParams) (Task, error)
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
 }
 

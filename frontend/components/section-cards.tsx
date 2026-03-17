@@ -13,6 +13,7 @@ import {
 import { TrendingUpIcon, FolderIcon, CheckCircle2Icon, BotIcon, ActivityIcon } from "lucide-react"
 import { useProjects } from "@/hooks/useProjects"
 import { useAgents } from "@/features/agents"
+import type { Task } from "@/features/tasks"
 
 function getWeekStart(date: Date): Date {
   const d = new Date(date)
@@ -21,7 +22,12 @@ function getWeekStart(date: Date): Date {
   return new Date(d.setDate(diff))
 }
 
-export function SectionCards() {
+interface SectionCardsProps {
+  tasks?: Task[]
+  tasksLoading?: boolean
+}
+
+export function SectionCards({ tasks = [], tasksLoading = false }: SectionCardsProps) {
   const { projects, isLoading } = useProjects()
   const { agents, isLoading: isLoadingAgents } = useAgents()
 
@@ -30,6 +36,17 @@ export function SectionCards() {
     weekStart.setHours(0, 0, 0, 0)
     return projects.filter((p) => new Date(p.created_at) >= weekStart).length
   }, [projects])
+
+  const completedTasks = useMemo(() => {
+    return tasks.filter((t) => t.status === 'done').length
+  }, [tasks])
+
+  const totalTasks = tasks.length
+
+  const successRate = useMemo(() => {
+    if (totalTasks === 0) return 0
+    return Math.round((completedTasks / totalTasks) * 100 * 10) / 10
+  }, [completedTasks, totalTasks])
 
   return (
     <div className="grid grid-cols-1 gap-4 px-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card *:data-[slot=card]:shadow-xs lg:px-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-4 dark:*:data-[slot=card]:bg-card">
@@ -60,18 +77,18 @@ export function SectionCards() {
         <CardHeader>
           <CardDescription>Completed Tasks</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            156
+            {tasksLoading ? '-' : completedTasks}
           </CardTitle>
           <CardAction>
             <Badge variant="outline">
               <TrendingUpIcon />
-              +28%
+              {tasksLoading ? 0 : (totalTasks > 0 ? `+${Math.round((completedTasks / Math.max(totalTasks, 1)) * 100)}%` : '0%')}
             </Badge>
           </CardAction>
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
           <div className="line-clamp-1 flex gap-2 font-medium">
-            Steady progress{" "}
+            {tasksLoading ? 'Loading...' : `${completedTasks} of ${totalTasks} completed`}{" "}
             <CheckCircle2Icon className="size-4" />
           </div>
           <div className="text-muted-foreground">
@@ -106,18 +123,18 @@ export function SectionCards() {
         <CardHeader>
           <CardDescription>Success Rate</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            94.5%
+            {tasksLoading ? '-' : `${successRate}%`}
           </CardTitle>
           <CardAction>
             <Badge variant="outline">
               <TrendingUpIcon />
-              +2.3%
+              {tasksLoading ? '-' : `${successRate}%`}
             </Badge>
           </CardAction>
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
           <div className="line-clamp-1 flex gap-2 font-medium">
-            Improving performance{" "}
+            {tasksLoading ? 'Loading...' : (successRate >= 50 ? 'On track' : 'Needs improvement')}{" "}
             <TrendingUpIcon className="size-4" />
           </div>
           <div className="text-muted-foreground">

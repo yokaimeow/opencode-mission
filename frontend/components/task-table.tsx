@@ -11,8 +11,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import {
   Table,
   TableBody,
@@ -21,38 +29,42 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { EllipsisVerticalIcon, PlusIcon, ChevronLeftIcon, ChevronRightIcon, CircleCheckIcon, LoaderIcon } from "lucide-react"
+import { EllipsisVerticalIcon, PlusIcon, ChevronLeftIcon, ChevronRightIcon, CircleCheckIcon, LoaderIcon, EyeIcon, ClockIcon, XCircleIcon } from "lucide-react"
+import { taskApi } from "@/features/tasks"
+import type { Task, TaskStatus, TaskPriority } from "@/features/tasks"
+import { useRouter } from "next/navigation"
 
-interface Task {
-  id: number
-  title: string
-  status: "todo" | "in_progress" | "done"
-  priority: "low" | "medium" | "high"
-  assignee: string
-  project: string
+const statusConfig: Record<TaskStatus, { icon: React.ReactNode; text: string; className: string }> = {
+  todo: { icon: null, text: "To Do", className: "text-muted-foreground" },
+  in_progress: { icon: <ClockIcon className="size-3" />, text: "In Progress", className: "text-blue-600 dark:text-blue-400" },
+  in_review: { icon: <EyeIcon className="size-3" />, text: "In Review", className: "text-purple-600 dark:text-purple-400" },
+  done: { icon: <CircleCheckIcon className="size-3 fill-green-500 dark:fill-green-400" />, text: "Done", className: "text-green-600 dark:text-green-400" },
+  cancelled: { icon: <XCircleIcon className="size-3" />, text: "Cancelled", className: "text-gray-500" },
 }
 
-const mockTasks: Task[] = [
-  { id: 1, title: "Implement user authentication", status: "done", priority: "high", assignee: "Alice", project: "Frontend" },
-  { id: 2, title: "Design dashboard layout", status: "in_progress", priority: "medium", assignee: "Bob", project: "UI/UX" },
-  { id: 3, title: "Setup database migrations", status: "todo", priority: "high", assignee: "Charlie", project: "Backend" },
-  { id: 4, title: "Write API documentation", status: "in_progress", priority: "low", assignee: "Diana", project: "Docs" },
-  { id: 5, title: "Implement task filtering", status: "todo", priority: "medium", assignee: "Eve", project: "Frontend" },
-]
+const priorityConfig: Record<TaskPriority, { text: string; className: string }> = {
+  low: { text: "Low", className: "text-gray-600 dark:text-gray-400" },
+  medium: { text: "Medium", className: "text-yellow-600 dark:text-yellow-400" },
+  high: { text: "High", className: "text-orange-600 dark:text-orange-400" },
+  urgent: { text: "Urgent", className: "text-red-600 dark:text-red-400" },
+}
 
-export function TaskTable() {
-  const [tasks, setTasks] = React.useState<Task[]>(mockTasks)
-  const [selectedTasks, setSelectedTasks] = React.useState<number[]>([])
+interface TaskTableProps {
+  tasks?: Task[]
+  isLoading?: boolean
+  onDelete?: (taskId: string) => void
+}
 
-  const toggleTask = (taskId: number) => {
+export function TaskTable({ tasks: externalTasks, isLoading: externalLoading, onDelete }: TaskTableProps) {
+  const [selectedTasks, setSelectedTasks] = React.useState<string[]>([])
+  const [deleting, setDeleting] = React.useState<string | null>(null)
+  const [taskToDelete, setTaskToDelete] = React.useState<Task | null>(null)
+  const router = useRouter()
+
+  const tasks = externalTasks || []
+  const isLoading = externalLoading || false
+
+  const toggleTask = (taskId: string) => {
     setSelectedTasks(prev =>
       prev.includes(taskId)
         ? prev.filter(id => id !== taskId)
@@ -68,31 +80,60 @@ export function TaskTable() {
     }
   }
 
-  const getStatusBadge = (status: Task["status"]) => {
-    const variants = {
-      todo: { variant: "outline" as const, icon: null, text: "To Do" },
-      in_progress: { variant: "outline" as const, icon: <LoaderIcon className="size-3" />, text: "In Progress" },
-      done: { variant: "outline" as const, icon: <CircleCheckIcon className="size-3 fill-green-500 dark:fill-green-400" />, text: "Done" },
+  const handleDelete = async (taskId: string) => {
+    setDeleting(taskId)
+    try {
+      await taskApi.delete(taskId)
+      if (onDelete) {
+        onDelete(taskId)
+      }
+      setTaskToDelete(null)
+    } catch (err) {
+      console.error('Failed to delete task:', err)
+    } finally {
+      setDeleting(null)
     }
-    const config = variants[status]
+  }
+
+  const confirmDelete = (task: Task) => {
+    setTaskToDelete(task)
+  }
+
+  const getStatusBadge = (status: TaskStatus) => {
+    const config = statusConfig[status] || statusConfig.todo
     return (
-      <Badge variant={config.variant} className="px-1.5 text-muted-foreground">
+      <Badge variant="outline" className={`px-1.5 ${config.className}`}>
         {config.icon}
         {config.text}
       </Badge>
     )
   }
 
-  const getPriorityBadge = (priority: Task["priority"]) => {
-    const colors = {
-      low: "text-gray-600 dark:text-gray-400",
-      medium: "text-yellow-600 dark:text-yellow-400",
-      high: "text-red-600 dark:text-red-400",
-    }
+  const getPriorityBadge = (priority: TaskPriority) => {
+    const config = priorityConfig[priority] || priorityConfig.medium
     return (
-      <span className={`text-sm font-medium ${colors[priority]}`}>
-        {priority.charAt(0).toUpperCase() + priority.slice(1)}
+      <span className={`text-sm font-medium ${config.className}`}>
+        {config.text}
       </span>
+    )
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <LoaderIcon className="size-6 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
+  if (tasks.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-2 py-8 text-muted-foreground">
+        <p>No tasks yet</p>
+        <Button variant="outline" size="sm" onClick={() => router.push('/projects')}>
+          Go to Projects
+        </Button>
+      </div>
     )
   }
 
@@ -101,7 +142,7 @@ export function TaskTable() {
       <div className="flex items-center justify-between px-4 lg:px-6">
         <h2 className="text-lg font-semibold">Recent Tasks</h2>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={() => router.push('/projects')}>
             <PlusIcon />
             <span className="hidden lg:inline">Add Task</span>
           </Button>
@@ -113,7 +154,7 @@ export function TaskTable() {
             <TableRow>
               <TableHead className="w-12">
                 <Checkbox
-                  checked={selectedTasks.length === tasks.length}
+                  checked={selectedTasks.length === tasks.length && tasks.length > 0}
                   onCheckedChange={toggleAll}
                   aria-label="Select all"
                 />
@@ -122,7 +163,6 @@ export function TaskTable() {
               <TableHead>Status</TableHead>
               <TableHead>Priority</TableHead>
               <TableHead>Assignee</TableHead>
-              <TableHead>Project</TableHead>
               <TableHead className="w-12"></TableHead>
             </TableRow>
           </TableHeader>
@@ -142,11 +182,8 @@ export function TaskTable() {
                 <TableCell className="font-medium">{task.title}</TableCell>
                 <TableCell>{getStatusBadge(task.status)}</TableCell>
                 <TableCell>{getPriorityBadge(task.priority)}</TableCell>
-                <TableCell>{task.assignee}</TableCell>
                 <TableCell>
-                  <Badge variant="outline" className="px-1.5 text-muted-foreground">
-                    {task.project}
-                  </Badge>
+                  {task.assignee ? task.assignee.username : '-'}
                 </TableCell>
                 <TableCell>
                   <DropdownMenu>
@@ -155,16 +192,27 @@ export function TaskTable() {
                         variant="ghost"
                         className="flex size-8 text-muted-foreground data-[state=open]:bg-muted"
                         size="icon"
+                        disabled={deleting === task.id}
                       >
-                        <EllipsisVerticalIcon />
+                        {deleting === task.id ? (
+                          <LoaderIcon className="size-4 animate-spin" />
+                        ) : (
+                          <EllipsisVerticalIcon />
+                        )}
                         <span className="sr-only">Open menu</span>
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-32">
-                      <DropdownMenuItem>Edit</DropdownMenuItem>
-                      <DropdownMenuItem>Change Status</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => router.push(`/projects/${task.project_id}`)}>
+                        View Project
+                      </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem variant="destructive">Delete</DropdownMenuItem>
+                      <DropdownMenuItem 
+                        variant="destructive"
+                        onClick={() => confirmDelete(task)}
+                      >
+                        Delete
+                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>
@@ -188,6 +236,30 @@ export function TaskTable() {
           </Button>
         </div>
       </div>
+
+      <AlertDialog open={!!taskToDelete} onOpenChange={() => setTaskToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Task</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{taskToDelete?.title}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => taskToDelete && handleDelete(taskToDelete.id)}
+              disabled={deleting === taskToDelete?.id}
+            >
+              {deleting === taskToDelete?.id ? (
+                <LoaderIcon className="size-4 animate-spin mr-2" />
+              ) : null}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

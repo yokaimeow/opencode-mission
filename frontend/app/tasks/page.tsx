@@ -3,27 +3,26 @@
 import { useEffect } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { useRouter } from 'next/navigation'
-import { useUserTasks } from '@/features/tasks'
 import { AppSidebar } from "@/components/app-sidebar"
 import { SiteHeader } from "@/components/site-header"
-import { SectionCards } from "@/components/section-cards"
 import { TaskTable } from "@/components/task-table"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { Loading } from "@/components/loading"
+import { useUserTasks } from "@/features/tasks"
 
-export default function HomePage() {
-  const { isLoading, isAuthenticated } = useAuth()
-  const { tasks, isLoading: tasksLoading } = useUserTasks()
+export default function TasksPage() {
+  const { isLoading: authLoading, isAuthenticated } = useAuth()
   const router = useRouter()
+  const { tasks, isLoading: tasksLoading, refetch } = useUserTasks()
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    if (!authLoading && !isAuthenticated) {
       router.push('/auth/login')
     }
-  }, [isAuthenticated, isLoading, router])
+  }, [isAuthenticated, authLoading, router])
 
-  if (isLoading) {
+  if (authLoading) {
     return <Loading />
   }
 
@@ -43,12 +42,15 @@ export default function HomePage() {
       >
         <AppSidebar variant="inset" />
         <SidebarInset>
-          <SiteHeader title="Dashboard" />
+          <SiteHeader title="Tasks" />
           <div className="flex flex-1 flex-col">
             <div className="@container/main flex flex-1 flex-col gap-2">
               <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-                <SectionCards tasks={tasks} tasksLoading={tasksLoading} />
-                <TaskTable tasks={tasks} isLoading={tasksLoading} />
+                <TaskTable 
+                  tasks={tasks} 
+                  isLoading={tasksLoading} 
+                  onDelete={() => refetch()} 
+                />
               </div>
             </div>
           </div>

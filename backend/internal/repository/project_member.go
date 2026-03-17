@@ -164,3 +164,11 @@ func (r *ProjectMemberRepository) GetUserRole(ctx context.Context, projectID, us
 
 	return models.ProjectRole(role), nil
 }
+
+func (r *ProjectMemberRepository) IsMember(ctx context.Context, projectID, userID string) (bool, error) {
+	role, err := r.GetUserRole(ctx, projectID, userID)
+	if err != nil {
+		return false, nil
+	}
+	return role != "", nil
+}

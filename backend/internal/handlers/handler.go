@@ -22,6 +22,7 @@ type Handler struct {
 	projectService *services.ProjectService
 	memberService  *services.ProjectMemberService
 	agentService   *services.AgentService
+	taskService    *services.TaskService
 	jwtManager     *auth.JWTManager
 	tokenBlacklist *services.TokenBlacklistService
 	db             *pgxpool.Pool
@@ -33,6 +34,7 @@ func NewHandler(
 	projectService *services.ProjectService,
 	memberService *services.ProjectMemberService,
 	agentService *services.AgentService,
+	taskService *services.TaskService,
 	jwtManager *auth.JWTManager,
 	tokenBlacklist *services.TokenBlacklistService,
 	db *pgxpool.Pool,
@@ -43,6 +45,7 @@ func NewHandler(
 		projectService: projectService,
 		memberService:  memberService,
 		agentService:   agentService,
+		taskService:    taskService,
 		jwtManager:     jwtManager,
 		tokenBlacklist: tokenBlacklist,
 		db:             db,
@@ -450,23 +453,194 @@ func (h *Handler) DeleteProject(c *gin.Context) {
 }
 
 func (h *Handler) ListTasks(c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, gin.H{"error": "not implemented"})
+	userID, exists := c.Get("user_id")
+	if !exists {
+		utils.ErrorResponse(c, http.StatusUnauthorized, "UNAUTHORIZED", "User not authenticated")
+		return
+	}
+
+	projectID := c.Param("id")
+	if projectID == "" {
+		utils.ErrorResponse(c, http.StatusBadRequest, "INVALID_INPUT", "Project ID is required")
+		return
+	}
+
+	tasks, err := h.taskService.ListTasksByProject(c.Request.Context(), userID.(string), projectID)
+	if err != nil {
+		if errors.Is(err, services.ErrProjectNotFound) {
+			utils.ErrorResponse(c, http.StatusNotFound, "NOT_FOUND", "Project not found")
+			return
+		}
+		if errors.Is(err, services.ErrNotAuthorized) {
+			utils.ErrorResponse(c, http.StatusForbidden, "FORBIDDEN", "Not authorized to access this project")
+			return
+		}
+		utils.ErrorResponseWithDetails(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to list tasks", err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, http.StatusOK, tasks)
+}
+
+func (h *Handler) ListUserTasks(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		utils.ErrorResponse(c, http.StatusUnauthorized, "UNAUTHORIZED", "User not authenticated")
+		return
+	}
+
+	tasks, err := h.taskService.ListTasksByUser(c.Request.Context(), userID.(string))
+	if err != nil {
+		utils.ErrorResponseWithDetails(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to list tasks", err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, http.StatusOK, tasks)
 }
 
 func (h *Handler) CreateTask(c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, gin.H{"error": "not implemented"})
+	userID, exists := c.Get("user_id")
+	if !exists {
+		utils.ErrorResponse(c, http.StatusUnauthorized, "UNAUTHORIZED", "User not authenticated")
+		return
+	}
+
+	projectID := c.Param("id")
+	if projectID == "" {
+		utils.ErrorResponse(c, http.StatusBadRequest, "INVALID_INPUT", "Project ID is required")
+		return
+	}
+
+	var req models.CreateTaskRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.ErrorResponseWithDetails(c, http.StatusBadRequest, "INVALID_INPUT", "Invalid request data", err.Error())
+		return
+	}
+
+	task, err := h.taskService.CreateTask(c.Request.Context(), userID.(string), projectID, &req)
+	if err != nil {
+		if errors.Is(err, services.ErrProjectNotFound) {
+			utils.ErrorResponse(c, http.StatusNotFound, "NOT_FOUND", "Project not found")
+			return
+		}
+		if errors.Is(err, services.ErrNotAuthorized) {
+			utils.ErrorResponse(c, http.StatusForbidden, "FORBIDDEN", "Not authorized to create tasks in this project")
+			return
+		}
+		utils.ErrorResponseWithDetails(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to create task", err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, http.StatusCreated, task)
 }
 
 func (h *Handler) GetTask(c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, gin.H{"error": "not implemented"})
+	userID, exists := c.Get("user_id")
+	if !exists {
+		utils.ErrorResponse(c, http.StatusUnauthorized, "UNAUTHORIZED", "User not authenticated")
+		return
+	}
+
+	taskID := c.Param("id")
+	if taskID == "" {
+		utils.ErrorResponse(c, http.StatusBadRequest, "INVALID_INPUT", "Task ID is required")
+		return
+	}
+
+	task, err := h.taskService.GetTask(c.Request.Context(), userID.(string), taskID)
+	if err != nil {
+		if errors.Is(err, services.ErrTaskNotFound) {
+			utils.ErrorResponse(c, http.StatusNotFound, "NOT_FOUND", "Task not found")
+			return
+		}
+		if errors.Is(err, services.ErrProjectNotFound) {
+			utils.ErrorResponse(c, http.StatusNotFound, "NOT_FOUND", "Project not found")
+			return
+		}
+		if errors.Is(err, services.ErrNotAuthorized) {
+			utils.ErrorResponse(c, http.StatusForbidden, "FORBIDDEN", "Not authorized to access this task")
+			return
+		}
+		utils.ErrorResponseWithDetails(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to get task", err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, http.StatusOK, task)
 }
 
 func (h *Handler) UpdateTask(c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, gin.H{"error": "not implemented"})
+	userID, exists := c.Get("user_id")
+	if !exists {
+		utils.ErrorResponse(c, http.StatusUnauthorized, "UNAUTHORIZED", "User not authenticated")
+		return
+	}
+
+	taskID := c.Param("id")
+	if taskID == "" {
+		utils.ErrorResponse(c, http.StatusBadRequest, "INVALID_INPUT", "Task ID is required")
+		return
+	}
+
+	var req models.UpdateTaskRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.ErrorResponseWithDetails(c, http.StatusBadRequest, "INVALID_INPUT", "Invalid request data", err.Error())
+		return
+	}
+
+	task, err := h.taskService.UpdateTask(c.Request.Context(), userID.(string), taskID, &req)
+	if err != nil {
+		if errors.Is(err, services.ErrTaskNotFound) {
+			utils.ErrorResponse(c, http.StatusNotFound, "NOT_FOUND", "Task not found")
+			return
+		}
+		if errors.Is(err, services.ErrProjectNotFound) {
+			utils.ErrorResponse(c, http.StatusNotFound, "NOT_FOUND", "Project not found")
+			return
+		}
+		if errors.Is(err, services.ErrNotAuthorized) {
+			utils.ErrorResponse(c, http.StatusForbidden, "FORBIDDEN", "Not authorized to update this task")
+			return
+		}
+		utils.ErrorResponseWithDetails(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to update task", err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, http.StatusOK, task)
 }
 
 func (h *Handler) DeleteTask(c *gin.Context) {
-	c.JSON(http.StatusNotImplemented, gin.H{"error": "not implemented"})
+	userID, exists := c.Get("user_id")
+	if !exists {
+		utils.ErrorResponse(c, http.StatusUnauthorized, "UNAUTHORIZED", "User not authenticated")
+		return
+	}
+
+	taskID := c.Param("id")
+	if taskID == "" {
+		utils.ErrorResponse(c, http.StatusBadRequest, "INVALID_INPUT", "Task ID is required")
+		return
+	}
+
+	if err := h.taskService.DeleteTask(c.Request.Context(), userID.(string), taskID); err != nil {
+		if errors.Is(err, services.ErrTaskNotFound) {
+			utils.ErrorResponse(c, http.StatusNotFound, "NOT_FOUND", "Task not found")
+			return
+		}
+		if errors.Is(err, services.ErrProjectNotFound) {
+			utils.ErrorResponse(c, http.StatusNotFound, "NOT_FOUND", "Project not found")
+			return
+		}
+		if errors.Is(err, services.ErrNotAuthorized) {
+			utils.ErrorResponse(c, http.StatusForbidden, "FORBIDDEN", "Not authorized to delete this task")
+			return
+		}
+		utils.ErrorResponseWithDetails(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to delete task", err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, http.StatusOK, gin.H{
+		"message": "Task deleted successfully",
+	})
 }
 
 func (h *Handler) ListMembers(c *gin.Context) {
