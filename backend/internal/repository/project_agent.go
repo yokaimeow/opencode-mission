@@ -75,11 +75,24 @@ func (r *ProjectAgentRepository) GetByProject(ctx context.Context, projectID str
 			CreatedAt: row.CreatedAt,
 		}
 
+		if len(row.ConfigOverride) > 0 {
+			var config map[string]string
+			if err := json.Unmarshal(row.ConfigOverride, &config); err == nil && len(config) > 0 {
+				pa.ConfigOverride = config
+			}
+		}
+
 		if row.AgentIDCol.Valid {
 			pa.Agent = &models.Agent{
 				ID:   uuid.UUID(row.AgentIDCol.Bytes).String(),
 				Name: row.AgentName.String,
 				Type: models.AgentType(row.AgentType.AgentType),
+			}
+			if len(row.AgentConfig) > 0 {
+				var config map[string]string
+				if err := json.Unmarshal(row.AgentConfig, &config); err == nil && len(config) > 0 {
+					pa.Agent.Config = config
+				}
 			}
 		}
 
@@ -116,11 +129,24 @@ func (r *ProjectAgentRepository) GetByProjectAndAgent(ctx context.Context, proje
 		CreatedAt: row.CreatedAt,
 	}
 
+	if len(row.ConfigOverride) > 0 {
+		var config map[string]string
+		if err := json.Unmarshal(row.ConfigOverride, &config); err == nil && len(config) > 0 {
+			pa.ConfigOverride = config
+		}
+	}
+
 	if row.AgentIDCol.Valid {
 		pa.Agent = &models.Agent{
 			ID:   uuid.UUID(row.AgentIDCol.Bytes).String(),
 			Name: row.AgentName.String,
 			Type: models.AgentType(row.AgentType.AgentType),
+		}
+		if len(row.AgentConfig) > 0 {
+			var config map[string]string
+			if err := json.Unmarshal(row.AgentConfig, &config); err == nil && len(config) > 0 {
+				pa.Agent.Config = config
+			}
 		}
 	}
 

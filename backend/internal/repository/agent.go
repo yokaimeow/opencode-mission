@@ -74,6 +74,13 @@ func (r *AgentRepository) GetByID(ctx context.Context, id string) (*models.Agent
 		UpdatedAt: row.UpdatedAt,
 	}
 
+	if len(row.Config) > 0 {
+		var config map[string]string
+		if err := json.Unmarshal(row.Config, &config); err == nil && len(config) > 0 {
+			agent.Config = config
+		}
+	}
+
 	if row.CreatorID.Valid {
 		agent.Creator = &models.User{
 			ID:       uuid.UUID(row.CreatorID.Bytes).String(),
@@ -108,6 +115,13 @@ func (r *AgentRepository) ListByCreator(ctx context.Context, createdBy string) (
 			CreatedBy: row.CreatedBy.String(),
 			CreatedAt: row.CreatedAt,
 			UpdatedAt: row.UpdatedAt,
+		}
+
+		if len(row.Config) > 0 {
+			var config map[string]string
+			if err := json.Unmarshal(row.Config, &config); err == nil && len(config) > 0 {
+				agent.Config = config
+			}
 		}
 
 		if row.CreatorID.Valid {

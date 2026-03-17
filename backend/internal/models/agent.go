@@ -2,8 +2,6 @@ package models
 
 import (
 	"time"
-
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type AgentType string
@@ -16,25 +14,25 @@ const (
 )
 
 type Agent struct {
-	ID        string     `json:"id" db:"id"`
-	Name      string     `json:"name" db:"name"`
-	Type      AgentType  `json:"type" db:"type"`
-	Config    pgtype.Map `json:"config" db:"config"`
-	CreatedBy string     `json:"created_by" db:"created_by"`
-	CreatedAt time.Time  `json:"created_at" db:"created_at"`
-	UpdatedAt time.Time  `json:"updated_at" db:"updated_at"`
+	ID        string            `json:"id" db:"id"`
+	Name      string            `json:"name" db:"name"`
+	Type      AgentType         `json:"type" db:"type"`
+	Config    map[string]string `json:"config,omitempty" db:"config"`
+	CreatedBy string            `json:"created_by" db:"created_by"`
+	CreatedAt time.Time         `json:"created_at" db:"created_at"`
+	UpdatedAt time.Time         `json:"updated_at" db:"updated_at"`
 
 	Creator *User `json:"creator,omitempty"`
 }
 
 type ProjectAgent struct {
-	ID             string      `json:"id" db:"id"`
-	ProjectID      string      `json:"project_id" db:"project_id"`
-	AgentID        string      `json:"agent_id" db:"agent_id"`
-	Role           ProjectRole `json:"role" db:"role"`
-	ConfigOverride pgtype.Map  `json:"config_override,omitempty" db:"config_override"`
-	CreatedBy      string      `json:"created_by" db:"created_by"`
-	CreatedAt      time.Time   `json:"created_at" db:"created_at"`
+	ID             string            `json:"id" db:"id"`
+	ProjectID      string            `json:"project_id" db:"project_id"`
+	AgentID        string            `json:"agent_id" db:"agent_id"`
+	Role           ProjectRole       `json:"role" db:"role"`
+	ConfigOverride map[string]string `json:"config_override,omitempty" db:"config_override"`
+	CreatedBy      string            `json:"created_by" db:"created_by"`
+	CreatedAt      time.Time         `json:"created_at" db:"created_at"`
 
 	Agent   *Agent   `json:"agent,omitempty"`
 	Project *Project `json:"project,omitempty"`
