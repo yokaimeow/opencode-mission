@@ -29,6 +29,7 @@ export function useTasks(projectId: string): UseTasksReturn {
       queryClient.setQueryData<Task[]>(['tasks', projectId], (old) =>
         old ? [...old, newTask] : [newTask]
       );
+      queryClient.invalidateQueries({ queryKey: ['userTasks'] });
     },
   });
 
@@ -39,6 +40,7 @@ export function useTasks(projectId: string): UseTasksReturn {
       queryClient.setQueryData<Task[]>(['tasks', projectId], (old) =>
         old ? old.map((t) => (t.id === updatedTask.id ? updatedTask : t)) : [updatedTask]
       );
+      queryClient.invalidateQueries({ queryKey: ['userTasks'] });
     },
   });
 
@@ -48,6 +50,7 @@ export function useTasks(projectId: string): UseTasksReturn {
       queryClient.setQueryData<Task[]>(['tasks', projectId], (old) =>
         old ? old.filter((t) => t.id !== deletedId) : []
       );
+      queryClient.invalidateQueries({ queryKey: ['userTasks'] });
     },
   });
 
@@ -121,6 +124,7 @@ export function useTask(taskId: string): UseTaskReturn {
     mutationFn: () => taskApi.delete(taskId),
     onSuccess: () => {
       queryClient.removeQueries({ queryKey: ['task', taskId] });
+      queryClient.invalidateQueries({ queryKey: ['userTasks'] });
     },
   });
 
