@@ -289,7 +289,7 @@ export default function ProjectsPage() {
                       <AlertDialogHeader>
                         <AlertDialogTitle>Delete Project</AlertDialogTitle>
                         <AlertDialogDescription>
-                          Are you sure you want to delete "{selectedProject?.name}"? This action cannot be undone.
+                          Are you sure you want to delete &ldquo;{selectedProject?.name}&rdquo;? This action cannot be undone.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>

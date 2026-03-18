@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { projectApi } from '@/lib/projects'
@@ -57,16 +57,7 @@ export default function ProjectSettingsPage() {
   })
   const loadingRef = useRef(false)
 
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      router.push('/auth/login')
-    } else if (isAuthenticated && params.id && !loadingRef.current) {
-      loadingRef.current = true
-      loadProject()
-    }
-  }, [isAuthenticated, authLoading, params.id, router])
-
-  const loadProject = async () => {
+  const loadProject = useCallback(async () => {
     try {
       const data = await projectApi.get(params.id as string)
       setProject(data)
@@ -84,7 +75,16 @@ export default function ProjectSettingsPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [params.id, router])
+
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.push('/auth/login')
+    } else if (isAuthenticated && params.id && !loadingRef.current) {
+      loadingRef.current = true
+      loadProject()
+    }
+  }, [isAuthenticated, authLoading, params.id, router, loadProject])
 
   const handleUpdateProject = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -430,7 +430,7 @@ export default function ProjectSettingsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Project</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{project.name}"? This action cannot be undone.
+              Are you sure you want to delete &ldquo;{project.name}&rdquo;? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

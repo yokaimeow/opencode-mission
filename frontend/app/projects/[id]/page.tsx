@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { projectApi } from '@/lib/projects'
@@ -17,7 +17,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Checkbox } from "@/components/ui/checkbox"
 import { AddMemberDialog } from "@/components/add-member-dialog"
 import { AddTaskDialog } from "@/components/add-task-dialog"
 import { EditTaskDialog } from "@/components/edit-task-dialog"
@@ -57,14 +56,6 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
 import { Loading } from "@/components/loading"
 
 export default function ProjectDetailPage() {
@@ -86,16 +77,7 @@ export default function ProjectDetailPage() {
 
   const { tasks, isLoading: tasksLoading, refetch: refetchTasks } = useTasks(params.id as string)
 
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      router.push('/auth/login')
-    } else if (isAuthenticated && params.id && !loadingRef.current) {
-      loadingRef.current = true
-      loadProject()
-    }
-  }, [isAuthenticated, authLoading, params.id, router])
-
-  const loadProject = async () => {
+  const loadProject = useCallback(async () => {
     try {
       const data = await projectApi.get(params.id as string)
       setProject(data)
@@ -109,7 +91,16 @@ export default function ProjectDetailPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [params.id, router])
+
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.push('/auth/login')
+    } else if (isAuthenticated && params.id && !loadingRef.current) {
+      loadingRef.current = true
+      loadProject()
+    }
+  }, [isAuthenticated, authLoading, params.id, router, loadProject])
 
   const handleAddSuccess = () => {
     loadProject()
@@ -179,18 +170,6 @@ export default function ProjectDetailPage() {
       case 'low':
         return 'text-gray-600 dark:text-gray-400'
     }
-  }
-
-  const getStatusBadge = (status: TaskStatus) => {
-    const config: Record<TaskStatus, { label: string; className: string }> = {
-      todo: { label: 'To Do', className: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' },
-      in_progress: { label: 'In Progress', className: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' },
-      in_review: { label: 'In Review', className: 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300' },
-      done: { label: 'Done', className: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' },
-      cancelled: { label: 'Cancelled', className: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300' },
-    }
-    const { label, className } = config[status] || config.todo
-    return <Badge variant="outline" className={className}>{label}</Badge>
   }
 
   const getRoleBadge = (role: ProjectMember['role']) => {
@@ -522,7 +501,7 @@ export default function ProjectDetailPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Task</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{selectedTask?.title}"? This action cannot be undone.
+              Are you sure you want to delete &ldquo;{selectedTask?.title}&rdquo;? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

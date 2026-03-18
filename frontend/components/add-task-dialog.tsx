@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { Loader2Icon, UserIcon, BotIcon } from 'lucide-react'
+import { Loader2Icon, BotIcon } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -108,18 +108,6 @@ export function AddTaskDialog({
     } finally {
       setIsLoading(false)
     }
-  }
-
-  const getAssigneeInfo = (assigneeId: string) => {
-    const member = members.find(m => m.user_id === assigneeId)
-    if (member) {
-      return { type: 'user' as const, data: member }
-    }
-    const agent = projectAgents.find(pa => pa.id === assigneeId)
-    if (agent) {
-      return { type: 'agent' as const, data: agent }
-    }
-    return null
   }
 
   return (

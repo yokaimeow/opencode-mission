@@ -23,12 +23,6 @@ interface RefreshTokenRequest {
   refresh_token: string;
 }
 
-interface Tokens {
-  access_token: string;
-  refresh_token: string;
-  expires_in: number;
-}
-
 class ApiClient {
   private baseUrl: string;
   private isRefreshing: boolean = false;
@@ -179,7 +173,7 @@ class ApiClient {
 
         // Retry the original request with new token
         response = await makeRequest();
-      } catch (error) {
+      } catch {
         throw {
           success: false,
           error: 'Authentication failed. Please login again.',

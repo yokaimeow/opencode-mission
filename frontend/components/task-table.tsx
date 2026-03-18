@@ -242,7 +242,7 @@ export function TaskTable({ tasks: externalTasks, isLoading: externalLoading, on
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Task</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{taskToDelete?.title}"? This action cannot be undone.
+              Are you sure you want to delete &ldquo;{taskToDelete?.title}&rdquo;? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

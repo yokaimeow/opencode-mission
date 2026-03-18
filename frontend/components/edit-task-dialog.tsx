@@ -324,7 +324,7 @@ export function EditTaskDialog({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Task</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{task.title}"? This action cannot be undone.
+              Are you sure you want to delete &ldquo;{task.title}&rdquo;? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
