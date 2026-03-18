@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"strings"
 	"time"
@@ -115,12 +114,7 @@ func (h *Handler) Register(c *gin.Context) {
 	}
 
 	authResp, err := h.authService.Register(c.Request.Context(), &req)
-	if err != nil {
-		if errors.Is(err, services.ErrEmailAlreadyRegistered) || errors.Is(err, services.ErrUsernameAlreadyTaken) {
-			utils.ErrorResponse(c, http.StatusConflict, "CONFLICT", err.Error())
-			return
-		}
-		utils.ErrorResponseWithDetails(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to register user", err.Error())
+	if utils.HandleServiceError(c, err, "register user") {
 		return
 	}
 
@@ -135,12 +129,7 @@ func (h *Handler) Login(c *gin.Context) {
 	}
 
 	authResp, err := h.authService.Login(c.Request.Context(), &req)
-	if err != nil {
-		if errors.Is(err, services.ErrInvalidCredentials) {
-			utils.ErrorResponse(c, http.StatusUnauthorized, "UNAUTHORIZED", "Invalid credentials")
-			return
-		}
-		utils.ErrorResponseWithDetails(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to login", err.Error())
+	if utils.HandleServiceError(c, err, "login") {
 		return
 	}
 
@@ -258,12 +247,7 @@ func (h *Handler) ChangePassword(c *gin.Context) {
 		return
 	}
 
-	if err := h.authService.ChangePassword(c.Request.Context(), userID.(string), &req); err != nil {
-		if errors.Is(err, services.ErrUserNotFound) {
-			utils.ErrorResponse(c, http.StatusNotFound, "NOT_FOUND", "User not found")
-			return
-		}
-		utils.ErrorResponseWithDetails(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to change password", err.Error())
+	if utils.HandleServiceError(c, h.authService.ChangePassword(c.Request.Context(), userID.(string), &req), "change password") {
 		return
 	}
 
@@ -369,16 +353,7 @@ func (h *Handler) GetProject(c *gin.Context) {
 	}
 
 	project, err := h.projectService.GetProject(c.Request.Context(), userID.(string), projectID)
-	if err != nil {
-		if errors.Is(err, services.ErrProjectNotFound) {
-			utils.ErrorResponse(c, http.StatusNotFound, "NOT_FOUND", "Project not found")
-			return
-		}
-		if errors.Is(err, services.ErrNotAuthorized) {
-			utils.ErrorResponse(c, http.StatusForbidden, "FORBIDDEN", "Not authorized to access this project")
-			return
-		}
-		utils.ErrorResponseWithDetails(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to get project", err.Error())
+	if utils.HandleServiceError(c, err, "get project") {
 		return
 	}
 
@@ -405,16 +380,7 @@ func (h *Handler) UpdateProject(c *gin.Context) {
 	}
 
 	project, err := h.projectService.UpdateProject(c.Request.Context(), userID.(string), projectID, &req)
-	if err != nil {
-		if errors.Is(err, services.ErrProjectNotFound) {
-			utils.ErrorResponse(c, http.StatusNotFound, "NOT_FOUND", "Project not found")
-			return
-		}
-		if errors.Is(err, services.ErrNotAuthorized) {
-			utils.ErrorResponse(c, http.StatusForbidden, "FORBIDDEN", "Not authorized to update this project")
-			return
-		}
-		utils.ErrorResponseWithDetails(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to update project", err.Error())
+	if utils.HandleServiceError(c, err, "update project") {
 		return
 	}
 
@@ -434,16 +400,7 @@ func (h *Handler) DeleteProject(c *gin.Context) {
 		return
 	}
 
-	if err := h.projectService.DeleteProject(c.Request.Context(), userID.(string), projectID); err != nil {
-		if errors.Is(err, services.ErrProjectNotFound) {
-			utils.ErrorResponse(c, http.StatusNotFound, "NOT_FOUND", "Project not found")
-			return
-		}
-		if errors.Is(err, services.ErrNotAuthorized) {
-			utils.ErrorResponse(c, http.StatusForbidden, "FORBIDDEN", "Not authorized to delete this project")
-			return
-		}
-		utils.ErrorResponseWithDetails(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to delete project", err.Error())
+	if utils.HandleServiceError(c, h.projectService.DeleteProject(c.Request.Context(), userID.(string), projectID), "delete project") {
 		return
 	}
 
@@ -466,16 +423,7 @@ func (h *Handler) ListTasks(c *gin.Context) {
 	}
 
 	tasks, err := h.taskService.ListTasksByProject(c.Request.Context(), userID.(string), projectID)
-	if err != nil {
-		if errors.Is(err, services.ErrProjectNotFound) {
-			utils.ErrorResponse(c, http.StatusNotFound, "NOT_FOUND", "Project not found")
-			return
-		}
-		if errors.Is(err, services.ErrNotAuthorized) {
-			utils.ErrorResponse(c, http.StatusForbidden, "FORBIDDEN", "Not authorized to access this project")
-			return
-		}
-		utils.ErrorResponseWithDetails(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to list tasks", err.Error())
+	if utils.HandleServiceError(c, err, "list tasks") {
 		return
 	}
 
@@ -518,16 +466,7 @@ func (h *Handler) CreateTask(c *gin.Context) {
 	}
 
 	task, err := h.taskService.CreateTask(c.Request.Context(), userID.(string), projectID, &req)
-	if err != nil {
-		if errors.Is(err, services.ErrProjectNotFound) {
-			utils.ErrorResponse(c, http.StatusNotFound, "NOT_FOUND", "Project not found")
-			return
-		}
-		if errors.Is(err, services.ErrNotAuthorized) {
-			utils.ErrorResponse(c, http.StatusForbidden, "FORBIDDEN", "Not authorized to create tasks in this project")
-			return
-		}
-		utils.ErrorResponseWithDetails(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to create task", err.Error())
+	if utils.HandleServiceError(c, err, "create task") {
 		return
 	}
 
@@ -548,20 +487,7 @@ func (h *Handler) GetTask(c *gin.Context) {
 	}
 
 	task, err := h.taskService.GetTask(c.Request.Context(), userID.(string), taskID)
-	if err != nil {
-		if errors.Is(err, services.ErrTaskNotFound) {
-			utils.ErrorResponse(c, http.StatusNotFound, "NOT_FOUND", "Task not found")
-			return
-		}
-		if errors.Is(err, services.ErrProjectNotFound) {
-			utils.ErrorResponse(c, http.StatusNotFound, "NOT_FOUND", "Project not found")
-			return
-		}
-		if errors.Is(err, services.ErrNotAuthorized) {
-			utils.ErrorResponse(c, http.StatusForbidden, "FORBIDDEN", "Not authorized to access this task")
-			return
-		}
-		utils.ErrorResponseWithDetails(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to get task", err.Error())
+	if utils.HandleServiceError(c, err, "get task") {
 		return
 	}
 
@@ -588,20 +514,7 @@ func (h *Handler) UpdateTask(c *gin.Context) {
 	}
 
 	task, err := h.taskService.UpdateTask(c.Request.Context(), userID.(string), taskID, &req)
-	if err != nil {
-		if errors.Is(err, services.ErrTaskNotFound) {
-			utils.ErrorResponse(c, http.StatusNotFound, "NOT_FOUND", "Task not found")
-			return
-		}
-		if errors.Is(err, services.ErrProjectNotFound) {
-			utils.ErrorResponse(c, http.StatusNotFound, "NOT_FOUND", "Project not found")
-			return
-		}
-		if errors.Is(err, services.ErrNotAuthorized) {
-			utils.ErrorResponse(c, http.StatusForbidden, "FORBIDDEN", "Not authorized to update this task")
-			return
-		}
-		utils.ErrorResponseWithDetails(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to update task", err.Error())
+	if utils.HandleServiceError(c, err, "update task") {
 		return
 	}
 
@@ -621,20 +534,7 @@ func (h *Handler) DeleteTask(c *gin.Context) {
 		return
 	}
 
-	if err := h.taskService.DeleteTask(c.Request.Context(), userID.(string), taskID); err != nil {
-		if errors.Is(err, services.ErrTaskNotFound) {
-			utils.ErrorResponse(c, http.StatusNotFound, "NOT_FOUND", "Task not found")
-			return
-		}
-		if errors.Is(err, services.ErrProjectNotFound) {
-			utils.ErrorResponse(c, http.StatusNotFound, "NOT_FOUND", "Project not found")
-			return
-		}
-		if errors.Is(err, services.ErrNotAuthorized) {
-			utils.ErrorResponse(c, http.StatusForbidden, "FORBIDDEN", "Not authorized to delete this task")
-			return
-		}
-		utils.ErrorResponseWithDetails(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to delete task", err.Error())
+	if utils.HandleServiceError(c, h.taskService.DeleteTask(c.Request.Context(), userID.(string), taskID), "delete task") {
 		return
 	}
 
@@ -673,12 +573,7 @@ func (h *Handler) AddMember(c *gin.Context) {
 	}
 
 	member, err := h.memberService.AddMember(c.Request.Context(), projectID, req.UserID, req.Role)
-	if err != nil {
-		if errors.Is(err, services.ErrMemberAlreadyExists) {
-			utils.ErrorResponse(c, http.StatusConflict, "CONFLICT", "Member already exists")
-			return
-		}
-		utils.ErrorResponseWithDetails(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to add member", err.Error())
+	if utils.HandleServiceError(c, err, "add member") {
 		return
 	}
 
@@ -700,12 +595,7 @@ func (h *Handler) UpdateMemberRole(c *gin.Context) {
 	}
 
 	member, err := h.memberService.UpdateMemberRole(c.Request.Context(), projectID, userID, req.Role)
-	if err != nil {
-		if errors.Is(err, services.ErrMemberNotFound) {
-			utils.ErrorResponse(c, http.StatusNotFound, "NOT_FOUND", "Member not found")
-			return
-		}
-		utils.ErrorResponseWithDetails(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to update member role", err.Error())
+	if utils.HandleServiceError(c, err, "update member role") {
 		return
 	}
 
@@ -720,16 +610,7 @@ func (h *Handler) RemoveMember(c *gin.Context) {
 		return
 	}
 
-	if err := h.memberService.RemoveMember(c.Request.Context(), projectID, userID); err != nil {
-		if errors.Is(err, services.ErrMemberNotFound) {
-			utils.ErrorResponse(c, http.StatusNotFound, "NOT_FOUND", "Member not found")
-			return
-		}
-		if errors.Is(err, services.ErrCannotRemoveOwner) {
-			utils.ErrorResponse(c, http.StatusBadRequest, "BAD_REQUEST", "Cannot remove project owner")
-			return
-		}
-		utils.ErrorResponseWithDetails(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to remove member", err.Error())
+	if utils.HandleServiceError(c, h.memberService.RemoveMember(c.Request.Context(), projectID, userID), "remove member") {
 		return
 	}
 
@@ -784,12 +665,7 @@ func (h *Handler) GetAgent(c *gin.Context) {
 	}
 
 	agent, err := h.agentService.GetAgent(c.Request.Context(), agentID)
-	if err != nil {
-		if errors.Is(err, services.ErrAgentNotFound) {
-			utils.ErrorResponse(c, http.StatusNotFound, "NOT_FOUND", "Agent not found")
-			return
-		}
-		utils.ErrorResponseWithDetails(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to get agent", err.Error())
+	if utils.HandleServiceError(c, err, "get agent") {
 		return
 	}
 
@@ -816,16 +692,7 @@ func (h *Handler) UpdateAgent(c *gin.Context) {
 	}
 
 	agent, err := h.agentService.UpdateAgent(c.Request.Context(), userID.(string), agentID, &req)
-	if err != nil {
-		if errors.Is(err, services.ErrAgentNotFound) {
-			utils.ErrorResponse(c, http.StatusNotFound, "NOT_FOUND", "Agent not found")
-			return
-		}
-		if errors.Is(err, services.ErrNotAgentOwner) {
-			utils.ErrorResponse(c, http.StatusForbidden, "FORBIDDEN", "Not authorized to update this agent")
-			return
-		}
-		utils.ErrorResponseWithDetails(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to update agent", err.Error())
+	if utils.HandleServiceError(c, err, "update agent") {
 		return
 	}
 
@@ -845,16 +712,7 @@ func (h *Handler) DeleteAgent(c *gin.Context) {
 		return
 	}
 
-	if err := h.agentService.DeleteAgent(c.Request.Context(), userID.(string), agentID); err != nil {
-		if errors.Is(err, services.ErrAgentNotFound) {
-			utils.ErrorResponse(c, http.StatusNotFound, "NOT_FOUND", "Agent not found")
-			return
-		}
-		if errors.Is(err, services.ErrNotAgentOwner) {
-			utils.ErrorResponse(c, http.StatusForbidden, "FORBIDDEN", "Not authorized to delete this agent")
-			return
-		}
-		utils.ErrorResponseWithDetails(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to delete agent", err.Error())
+	if utils.HandleServiceError(c, h.agentService.DeleteAgent(c.Request.Context(), userID.(string), agentID), "delete agent") {
 		return
 	}
 
@@ -899,16 +757,7 @@ func (h *Handler) AddProjectAgent(c *gin.Context) {
 	}
 
 	agent, err := h.agentService.AddAgentToProject(c.Request.Context(), projectID, req.AgentID, userID.(string), &req)
-	if err != nil {
-		if errors.Is(err, services.ErrAgentNotFound) {
-			utils.ErrorResponse(c, http.StatusNotFound, "NOT_FOUND", "Agent not found")
-			return
-		}
-		if errors.Is(err, services.ErrAgentAlreadyInProject) {
-			utils.ErrorResponse(c, http.StatusConflict, "CONFLICT", "Agent already in project")
-			return
-		}
-		utils.ErrorResponseWithDetails(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to add agent to project", err.Error())
+	if utils.HandleServiceError(c, err, "add agent to project") {
 		return
 	}
 
@@ -923,12 +772,7 @@ func (h *Handler) RemoveProjectAgent(c *gin.Context) {
 		return
 	}
 
-	if err := h.agentService.RemoveAgentFromProject(c.Request.Context(), projectID, agentID); err != nil {
-		if errors.Is(err, services.ErrProjectAgentNotFound) {
-			utils.ErrorResponse(c, http.StatusNotFound, "NOT_FOUND", "Agent not found in project")
-			return
-		}
-		utils.ErrorResponseWithDetails(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to remove agent from project", err.Error())
+	if utils.HandleServiceError(c, h.agentService.RemoveAgentFromProject(c.Request.Context(), projectID, agentID), "remove agent from project") {
 		return
 	}
 
