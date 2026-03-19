@@ -22,6 +22,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { agentApi } from '@/lib/agents'
 import { memberApi } from '@/lib/members'
 import { userApi } from '@/lib/users'
+import { showError, showSuccess } from '@/lib/toast'
 import { Agent, User, ProjectRole } from '@/lib/types'
 
 interface AddMemberDialogProps {
@@ -73,7 +74,7 @@ export function AddMemberDialog({ open, onOpenChange, projectId, onSuccess }: Ad
       const data = await agentApi.list()
       setAgents(data)
     } catch (error) {
-      console.error('Failed to load agents:', error)
+      showError(error)
     }
   }
 
@@ -95,7 +96,7 @@ export function AddMemberDialog({ open, onOpenChange, projectId, onSuccess }: Ad
         const results = await userApi.search(query)
         setUserSearchResults(results)
       } catch (error) {
-        console.error('Failed to search users:', error)
+        showError(error)
         setUserSearchResults([])
       } finally {
         setIsSearchingUsers(false)
@@ -122,8 +123,9 @@ export function AddMemberDialog({ open, onOpenChange, projectId, onSuccess }: Ad
       setUserForm({ userId: '', role: 'member' })
       onOpenChange(false)
       onSuccess?.()
+      showSuccess('Member added')
     } catch (error) {
-      console.error('Failed to add user:', error)
+      showError(error)
     } finally {
       setIsLoading(false)
     }
@@ -141,8 +143,9 @@ export function AddMemberDialog({ open, onOpenChange, projectId, onSuccess }: Ad
       setAgentForm({ agentId: '', role: 'member' })
       onOpenChange(false)
       onSuccess?.()
+      showSuccess('Agent added')
     } catch (error) {
-      console.error('Failed to add agent:', error)
+      showError(error)
     } finally {
       setIsLoading(false)
     }

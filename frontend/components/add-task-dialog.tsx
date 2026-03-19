@@ -21,6 +21,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { taskApi } from '@/features/tasks'
+import { showError, showSuccess } from '@/lib/toast'
 import type { TaskStatus, TaskPriority } from '@/features/tasks'
 import type { ProjectMember, ProjectAgent } from '@/lib/types'
 
@@ -102,8 +103,9 @@ export function AddTaskDialog({
       })
       onOpenChange(false)
       onSuccess?.()
+      showSuccess('Task created')
     } catch (err) {
-      console.error('Failed to create task:', err)
+      showError(err)
       setError(err instanceof Error ? err.message : 'Failed to create task')
     } finally {
       setIsLoading(false)

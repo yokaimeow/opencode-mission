@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { taskApi } from '../api/taskApi';
+import { showError, showSuccess } from '@/lib/toast';
 import type { Task, CreateTaskRequest, UpdateTaskRequest, TaskStatus, TaskPriority } from '../types';
 
 interface UseTasksReturn {
@@ -30,7 +31,9 @@ export function useTasks(projectId: string): UseTasksReturn {
         old ? [...old, newTask] : [newTask]
       );
       queryClient.invalidateQueries({ queryKey: ['userTasks'] });
+      showSuccess('Task created');
     },
+    onError: (error) => showError(error),
   });
 
   const updateMutation = useMutation({
@@ -41,7 +44,9 @@ export function useTasks(projectId: string): UseTasksReturn {
         old ? old.map((t) => (t.id === updatedTask.id ? updatedTask : t)) : [updatedTask]
       );
       queryClient.invalidateQueries({ queryKey: ['userTasks'] });
+      showSuccess('Task updated');
     },
+    onError: (error) => showError(error),
   });
 
   const deleteMutation = useMutation({
@@ -51,7 +56,9 @@ export function useTasks(projectId: string): UseTasksReturn {
         old ? old.filter((t) => t.id !== deletedId) : []
       );
       queryClient.invalidateQueries({ queryKey: ['userTasks'] });
+      showSuccess('Task deleted');
     },
+    onError: (error) => showError(error),
   });
 
   const createTask = async (data: CreateTaskRequest): Promise<Task | null> => {
@@ -117,7 +124,9 @@ export function useTask(taskId: string): UseTaskReturn {
       queryClient.setQueryData<Task[]>(['tasks', updatedTask.project_id], (old) =>
         old ? old.map((t) => (t.id === updatedTask.id ? updatedTask : t)) : undefined
       );
+      showSuccess('Task updated');
     },
+    onError: (error) => showError(error),
   });
 
   const deleteMutation = useMutation({
@@ -125,7 +134,9 @@ export function useTask(taskId: string): UseTaskReturn {
     onSuccess: () => {
       queryClient.removeQueries({ queryKey: ['task', taskId] });
       queryClient.invalidateQueries({ queryKey: ['userTasks'] });
+      showSuccess('Task deleted');
     },
+    onError: (error) => showError(error),
   });
 
   const updateTask = async (data: UpdateTaskRequest): Promise<Task | null> => {

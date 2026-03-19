@@ -3,6 +3,7 @@ import { useRouter } from 'next/navigation'
 import { projectApi } from '@/lib/projects'
 import { memberApi } from '@/lib/members'
 import { agentApi } from '@/lib/agents'
+import { showError } from '@/lib/toast'
 import { Project, ProjectMember, ProjectAgent } from '@/lib/types'
 
 interface UseProjectResult {
@@ -32,7 +33,7 @@ export function useProject(projectId: string | null): UseProjectResult {
       const agentData = await agentApi.listProjectAgents(projectId)
       setProjectAgents(agentData)
     } catch (error) {
-      console.error('Failed to load project:', error)
+      showError(error)
       router.push('/projects')
     } finally {
       setIsLoading(false)

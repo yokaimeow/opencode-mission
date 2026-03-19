@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { agentApi } from '@/lib/agents'
+import { showError, showSuccess } from '@/lib/toast'
 import { Agent, CreateAgentRequest, UpdateAgentRequest } from '@/lib/types'
 
 interface UseAgentsReturn {
@@ -28,7 +29,9 @@ export function useAgents(): UseAgentsReturn {
       queryClient.setQueryData<Agent[]>(['agents'], (old) => 
         old ? [...old, newAgent] : [newAgent]
       )
+      showSuccess('Agent created');
     },
+    onError: (error) => showError(error),
   })
 
   const updateMutation = useMutation({
@@ -38,7 +41,9 @@ export function useAgents(): UseAgentsReturn {
       queryClient.setQueryData<Agent[]>(['agents'], (old) =>
         old ? old.map((a) => (a.id === updatedAgent.id ? updatedAgent : a)) : [updatedAgent]
       )
+      showSuccess('Agent updated');
     },
+    onError: (error) => showError(error),
   })
 
   const deleteMutation = useMutation({
@@ -47,7 +52,9 @@ export function useAgents(): UseAgentsReturn {
       queryClient.setQueryData<Agent[]>(['agents'], (old) =>
         old ? old.filter((a) => a.id !== deletedId) : []
       )
+      showSuccess('Agent deleted');
     },
+    onError: (error) => showError(error),
   })
 
   const createAgent = async (data: CreateAgentRequest): Promise<Agent | null> => {

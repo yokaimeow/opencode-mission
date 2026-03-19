@@ -31,6 +31,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { taskApi } from '@/features/tasks'
+import { showError, showSuccess } from '@/lib/toast'
 import type { Task, TaskStatus, TaskPriority } from '@/features/tasks'
 import type { ProjectMember, ProjectAgent } from '@/lib/types'
 
@@ -115,8 +116,9 @@ export function EditTaskDialog({
       })
       onOpenChange(false)
       onSuccess?.()
+      showSuccess('Task updated')
     } catch (err) {
-      console.error('Failed to update task:', err)
+      showError(err)
       setError(err instanceof Error ? err.message : 'Failed to update task')
     } finally {
       setIsLoading(false)
@@ -132,8 +134,9 @@ export function EditTaskDialog({
       setShowDeleteConfirm(false)
       onOpenChange(false)
       onSuccess?.()
+      showSuccess('Task deleted')
     } catch (err) {
-      console.error('Failed to delete task:', err)
+      showError(err)
     } finally {
       setIsDeleting(false)
     }

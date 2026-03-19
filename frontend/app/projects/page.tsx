@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { useRouter } from 'next/navigation'
 import { projectApi } from '@/lib/projects'
+import { showError, showSuccess } from '@/lib/toast'
 import { Project } from '@/lib/types'
 import { AppSidebar } from "@/components/app-sidebar"
 import { SiteHeader } from "@/components/site-header"
@@ -82,7 +83,7 @@ export default function ProjectsPage() {
       const data = await projectApi.list()
       setProjects(data)
     } catch (error) {
-      console.error('Failed to load projects:', error)
+      showError(error)
     } finally {
       setIsLoading(false)
     }
@@ -95,8 +96,9 @@ export default function ProjectsPage() {
       setIsDialogOpen(false)
       setFormData({ name: '', description: '' })
       loadProjects()
+      showSuccess('Project created')
     } catch (error) {
-      console.error('Failed to create project:', error)
+      showError(error)
     }
   }
 
@@ -119,8 +121,9 @@ export default function ProjectsPage() {
       setSelectedProject(null)
       setFormData({ name: '', description: '' })
       loadProjects()
+      showSuccess('Project updated')
     } catch (error) {
-      console.error('Failed to update project:', error)
+      showError(error)
     }
   }
 
@@ -137,8 +140,9 @@ export default function ProjectsPage() {
       setIsDeleteDialogOpen(false)
       setSelectedProject(null)
       loadProjects()
+      showSuccess('Project deleted')
     } catch (error) {
-      console.error('Failed to delete project:', error)
+      showError(error)
     }
   }
 

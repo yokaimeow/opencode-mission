@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Toaster } from "sonner";
 import { AuthProvider } from "@/features/auth";
 import { ThemeProvider } from "@/components/theme-provider";
 import { QueryProvider } from "@/components/query-providers";
@@ -41,6 +42,7 @@ export default function RootLayout({
               {children}
             </AuthProvider>
           </QueryProvider>
+          <Toaster richColors closeButton />
         </ThemeProvider>
       </body>
     </html>

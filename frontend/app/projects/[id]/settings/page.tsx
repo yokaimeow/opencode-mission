@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { projectApi } from '@/lib/projects'
 import { memberApi } from '@/lib/members'
 import { agentApi } from '@/lib/agents'
+import { showError, showSuccess } from '@/lib/toast'
 import { Project, ProjectMember, ProjectAgent } from '@/lib/types'
 import { AppSidebar } from "@/components/app-sidebar"
 import { SiteHeader } from "@/components/site-header"
@@ -70,7 +71,7 @@ export default function ProjectSettingsPage() {
       const agentData = await agentApi.listProjectAgents(params.id as string)
       setProjectAgents(agentData)
     } catch (error) {
-      console.error('Failed to load project:', error)
+      showError(error)
       router.push('/projects')
     } finally {
       setIsLoading(false)
@@ -94,8 +95,9 @@ export default function ProjectSettingsPage() {
       const updated = await projectApi.update(project.id, formData)
       setProject(updated)
       setIsEditDialogOpen(false)
+      showSuccess('Project updated')
     } catch (error) {
-      console.error('Failed to update project:', error)
+      showError(error)
     }
   }
 
@@ -104,9 +106,10 @@ export default function ProjectSettingsPage() {
 
     try {
       await projectApi.delete(project.id)
+      showSuccess('Project deleted')
       router.push('/projects')
     } catch (error) {
-      console.error('Failed to delete project:', error)
+      showError(error)
     }
   }
 
@@ -118,8 +121,9 @@ export default function ProjectSettingsPage() {
       setMembers(members.filter(m => m.user_id !== memberToRemove.user_id))
       setIsRemoveMemberDialogOpen(false)
       setMemberToRemove(null)
+      showSuccess('Member removed')
     } catch (error) {
-      console.error('Failed to remove member:', error)
+      showError(error)
     }
   }
 
@@ -131,8 +135,9 @@ export default function ProjectSettingsPage() {
       setProjectAgents(projectAgents.filter(pa => pa.agent_id !== agentToRemove.agent_id))
       setIsRemoveAgentDialogOpen(false)
       setAgentToRemove(null)
+      showSuccess('Agent removed')
     } catch (error) {
-      console.error('Failed to remove agent:', error)
+      showError(error)
     }
   }
 

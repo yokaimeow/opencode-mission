@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { useProject } from '@/hooks/useProject'
 import { useTasks, taskApi } from '@/features/tasks'
+import { showError, showSuccess } from '@/lib/toast'
 import type { Task, TaskStatus, TaskPriority } from '@/features/tasks'
 import { AppSidebar } from "@/components/app-sidebar"
 import { SiteHeader } from "@/components/site-header"
@@ -97,8 +98,9 @@ export default function ProjectDetailPage() {
       setShowDeleteConfirm(false)
       setSelectedTask(null)
       refetchTasks()
+      showSuccess('Task deleted')
     } catch (error) {
-      console.error('Failed to delete task:', error)
+      showError(error)
     } finally {
       setIsDeleting(false)
     }
@@ -108,8 +110,9 @@ export default function ProjectDetailPage() {
     try {
       await taskApi.update(task.id, { status: newStatus })
       refetchTasks()
+      showSuccess('Status updated')
     } catch (error) {
-      console.error('Failed to update task status:', error)
+      showError(error)
     }
   }
 
