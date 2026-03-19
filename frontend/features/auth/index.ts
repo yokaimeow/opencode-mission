@@ -1,4 +1,4 @@
-export { AuthProvider, useAuth } from './hooks/useAuth';
+export { useAuth, useAuthStore } from '@/stores/authStore';
 export { authApi } from './api/authApi';
 export type {
   User,
@@ -10,5 +10,4 @@ export type {
   TokensResponse,
   VerifyTokenResponse,
   AuthState,
-  AuthContextValue,
 } from './types';
